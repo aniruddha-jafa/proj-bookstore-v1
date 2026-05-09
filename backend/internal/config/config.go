@@ -12,7 +12,9 @@ type AppConfig struct {
 	Port              int    `env:"PORT"`
 	JwtSecret         string `env:"JWT_SECRET"`
 	MinPasswordLength int    `env:"MIN_PASSWORD_LENGTH"`
-	DbConfig          DbConfig
+	// Comma-separated origins for browser clients (e.g. Next.js dev server).
+	CORSAllowOrigins string `env:"CORS_ALLOW_ORIGINS"`
+	DbConfig         DbConfig
 }
 
 func (appConfig *AppConfig) String() string {

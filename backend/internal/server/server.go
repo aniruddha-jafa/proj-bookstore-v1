@@ -18,6 +18,7 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // or your preferred SQL driver
 )
@@ -62,6 +63,19 @@ func InitServer() {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: errorHandler,
 	})
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: config.CORSAllowOrigins,
+		AllowMethods: strings.Join([]string{
+			fiber.MethodGet,
+			fiber.MethodPost,
+			fiber.MethodPut,
+			fiber.MethodPatch,
+			fiber.MethodDelete,
+			fiber.MethodOptions,
+		}, ","),
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+	}))
 
 	app.Get("/ping", func(ctx *fiber.Ctx) error {
 		err := ctx.SendString("pong\n")
