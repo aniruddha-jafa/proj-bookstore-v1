@@ -19,6 +19,7 @@ import {
 } from "@/features/auth/auth-schema";
 import MESSAGES from "@/constants/messages";
 import { login } from "@/features/auth/auth-api";
+import { logger } from "@/lib/logger";
 
 const LOGIN_SUCCESS_URL = "/";
 
@@ -44,7 +45,7 @@ export default function LoginPage() {
         toast.error(res.message);
         return;
       }
-      console.log("DEBUG: Login successful", res.data);
+      logger.info("login successful", { userId: res.data.id, email: res.data.email });
       router.push(LOGIN_SUCCESS_URL);
       router.refresh();
     } catch {

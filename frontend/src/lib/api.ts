@@ -1,5 +1,6 @@
 import { z } from "zod";
 import MESSAGES from "@/constants/messages";
+import { logger } from "@/lib/logger";
 
 export type ApiSuccess<T> = { ok: true; status: number; data: T };
 export type ApiFailure = { ok: false; status: number; message: string };
@@ -43,7 +44,7 @@ export async function apiRequest<T>(
     // Parse the body with the schema
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      console.error("DEBUG: API response validation failed", parsed.error);
+      logger.error("API response validation failed", parsed.error.flatten());
       return {
         ok: false,
         status: res.status,
