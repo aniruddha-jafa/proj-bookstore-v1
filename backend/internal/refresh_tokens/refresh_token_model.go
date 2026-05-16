@@ -11,11 +11,11 @@ import (
 
 type RefreshToken struct {
 	ID        string    `json:"token"`
-	UserID    uuid.UUID `json:"user_id"`
-	ExpiresAt time.Time `json:"expires_at"`
-	RevokedAt time.Time `json:"revoked_at"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UserID    uuid.UUID `json:"userId"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	RevokedAt time.Time `json:"revokedAt"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func ToDomain(dbRefreshToken *db.RefreshToken) (*RefreshToken, error) {

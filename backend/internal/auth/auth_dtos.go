@@ -25,10 +25,10 @@ func (r LoginRequest) Validate() error {
 type LoginResponse struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 	Token        string    `json:"token"`
-	RefreshToken string    `json:"refresh_token"`
+	RefreshToken string    `json:"refreshToken"`
 }
 
 func NewLoginResponse(user users.User, token string, refreshToken string) LoginResponse {
