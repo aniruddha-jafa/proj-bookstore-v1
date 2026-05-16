@@ -9,16 +9,17 @@ import (
 )
 
 type AppConfig struct {
+	AppEnv            string `env:"APP_ENV" env-default:"prod"`
 	Port              int    `env:"PORT"`
 	JwtSecret         string `env:"JWT_SECRET"`
 	MinPasswordLength int    `env:"MIN_PASSWORD_LENGTH"`
 	// Comma-separated origins for browser clients (e.g. Next.js dev server).
-	CORSAllowOrigins string `env:"CORS_ALLOW_ORIGINS"`
-	DbConfig         DbConfig
+	CORSAllowOrigin string `env:"CORS_ALLOW_ORIGIN"`
+	DbConfig        DbConfig
 }
 
 func (appConfig *AppConfig) String() string {
-	return fmt.Sprintf("Port: %d, DbConfig: %v", appConfig.Port, appConfig.DbConfig)
+	return fmt.Sprintf("AppEnv: %s, Port: %d, CORSAllowOrigin: %s, DbConfig: %v", appConfig.AppEnv, appConfig.Port, appConfig.CORSAllowOrigin, appConfig.DbConfig)
 }
 
 func (dbConfig *DbConfig) String() string {
@@ -46,6 +47,9 @@ func InitAppConfig() *AppConfig {
 		err := cleanenv.ReadConfig(".env", appConfig)
 		if err != nil {
 			log.Fatalf("Unable to read app config: %v", err)
+		}
+		if appConfig.CORSAllowOrigin == "*" {
+			log.Fatal("CORSAllowOrigins cannot be *")
 		}
 		log.Printf("App config initialized: %s", appConfig)
 	})

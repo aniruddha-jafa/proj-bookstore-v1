@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
@@ -12,6 +13,10 @@ import (
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+func (r LoginRequest) String() string {
+	return fmt.Sprintf("LoginRequest{Email: %s, Password: ******}", r.Email)
 }
 
 func (r LoginRequest) Validate() error {
@@ -23,25 +28,28 @@ func (r LoginRequest) Validate() error {
 }
 
 type LoginResponse struct {
-	ID           uuid.UUID `json:"id"`
-	Email        string    `json:"email"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
-	Token        string    `json:"token"`
-	RefreshToken string    `json:"refreshToken"`
+	ID        uuid.UUID `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	Token     string    `json:"token"`
+	// Not returned via JSON since it's stored in the cookie
+	RefreshToken          string    `json:"-"`
+	RefreshTokenExpiresAt time.Time `json:"-"`
 }
 
-func NewLoginResponse(user users.User, token string, refreshToken string) LoginResponse {
+func NewLoginResponse(user users.User, token string, refreshToken refresh_tokens.RefreshToken) LoginResponse {
 	return LoginResponse{
-		ID:           user.ID,
-		Email:        user.Email,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
-		Token:        token,
-		RefreshToken: refreshToken,
+		ID:                    user.ID,
+		Email:                 user.Email,
+		CreatedAt:             user.CreatedAt,
+		UpdatedAt:             user.UpdatedAt,
+		Token:                 token,
+		RefreshToken:          refreshToken.ID,
+		RefreshTokenExpiresAt: refreshToken.ExpiresAt,
 	}
 }
 
 func (r LoginResponse) String() string {
-	return fmt.Sprintf("LoginResponse{ID: %s, Email: %s, CreatedAt: %s, UpdatedAt: %s, Token: %s, RefreshToken: %s}", r.ID, r.Email, r.CreatedAt, r.UpdatedAt, r.Token, r.RefreshToken)
+	return fmt.Sprintf("LoginResponse{ID: %s, Email: %s, CreatedAt: %s, UpdatedAt: %s, Token: *****, RefreshToken: *****}", r.ID, r.Email, r.CreatedAt, r.UpdatedAt)
 }

@@ -14,7 +14,6 @@ export const loginResponseSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   token: z.string(),
-  refreshToken: z.string(),
 });
 
 export type LoginResponse = z.infer<typeof loginResponseSchema>;

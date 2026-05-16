@@ -12,12 +12,19 @@ export type ApiResult<T> = ApiSuccess<T> | ApiFailure;
  * @param schema - The schema to parse the response body with.
  * @returns The result of the request.
  */
-export async function apiRequest<T>(url: string, init?: RequestInit, schema?: z.ZodType<T>): Promise<ApiResult<T>> {
+export async function apiRequest<T>(
+  url: string,
+  init?: RequestInit,
+  schema?: z.ZodType<T>,
+): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
+    const res = await fetch(url, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
     // Not all responses have a body
     const body = await res.json().catch(() => null);
-    
+
     if (!res.ok) {
       return {
         ok: false,
@@ -37,7 +44,11 @@ export async function apiRequest<T>(url: string, init?: RequestInit, schema?: z.
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       console.error("DEBUG: API response validation failed", parsed.error);
-      return { ok: false, status: res.status, message: MESSAGES.ERROR_API_PARSING };
+      return {
+        ok: false,
+        status: res.status,
+        message: MESSAGES.ERROR_API_PARSING,
+      };
     }
     return { ok: true, status: res.status, data: parsed.data };
   } catch {

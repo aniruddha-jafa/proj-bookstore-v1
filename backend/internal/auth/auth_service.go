@@ -39,7 +39,7 @@ func (s *AuthServiceImpl) SignUp(ctx *context.Context, signupRequest users.UserC
 }
 
 func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest) (LoginResponse, error) {
-	log.Printf("Logging in user: %v", loginRequest)
+	log.Printf("Logging in user: %s", loginRequest)
 	// Lookup email
 	// Don't return a 404 to avoid leaking info that the user doesn't exist
 	user, err := s.UserService.GetByEmail(ctx, loginRequest.Email)
@@ -76,9 +76,9 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 		log.Printf("Error creating refresh token: %v", err)
 		return LoginResponse{}, errors.New("unable to create refresh token: " + err.Error())
 	}
-	log.Printf("Refresh token created: %v", refreshToken)
+	log.Printf("Refresh token created for user %s: %s", user.ID, refreshToken.ID)
 	// Return response with user, token & refresh token info
-	return NewLoginResponse(user, token, refreshToken.ID), nil
+	return NewLoginResponse(user, token, refreshToken), nil
 }
 
 func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refresh_tokens.RefreshTokenResponse, error) {

@@ -65,7 +65,7 @@ func InitServer() {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: config.CORSAllowOrigins,
+		AllowOrigins: config.CORSAllowOrigin,
 		AllowMethods: strings.Join([]string{
 			fiber.MethodGet,
 			fiber.MethodPost,
@@ -74,7 +74,8 @@ func InitServer() {
 			fiber.MethodDelete,
 			fiber.MethodOptions,
 		}, ","),
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
 	}))
 
 	app.Get("/ping", func(ctx *fiber.Ctx) error {

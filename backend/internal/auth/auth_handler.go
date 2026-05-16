@@ -3,12 +3,14 @@ package auth
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
-	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
 )
+
+const REFRESH_TOKEN_COOKIE_NAME = "refreshToken"
 
 type AuthHandler interface {
 	Login(ctx *fiber.Ctx) error
@@ -22,25 +24,40 @@ type AuthHandlerImpl struct {
 }
 
 func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
-	log.Println("Login request received")
 	ctx := c.UserContext()
 	loginRequest := new(LoginRequest)
 	if err := c.BodyParser(loginRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to login request")
 	}
-	log.Printf("Login request: %s", loginRequest)
+	log.Printf("Login request: %s", loginRequest.String())
 	err := loginRequest.Validate()
 	if err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, err.Error())
 	}
-	userRes, err := h.AuthService.Login(&ctx, *loginRequest)
+	loginRes, err := h.AuthService.Login(&ctx, *loginRequest)
 	if err != nil {
 		log.Printf("Login error: %s", err)
 		return err
 	}
-	log.Printf("Login successful for user: %v", userRes)
-	c.Status(http.StatusOK).JSON(userRes)
+	refreshTokenCookie := h.getRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
+	c.Cookie(refreshTokenCookie)
+
+	log.Printf("Login successful for user: %v", loginRes)
+	c.Status(http.StatusOK).JSON(loginRes)
 	return nil
+}
+
+// Returns a fiber.Cookie for the refresh token
+func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expiresAt time.Time) *fiber.Cookie {
+	return &fiber.Cookie{
+		Name:     REFRESH_TOKEN_COOKIE_NAME,
+		Value:    refreshTokenValue,
+		Expires:  expiresAt,
+		HTTPOnly: true,
+		Secure:   true,
+		// Allow cross-site requests from the frontend
+		SameSite: fiber.CookieSameSiteNoneMode,
+	}
 }
 
 func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
@@ -65,35 +82,33 @@ func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
 	return nil
 }
 
-// Use the refresh token to generate a new JWT,
-// if the refresh token is still valid.
+// Uses the refresh token to generate a new JWT,
 func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-	// Get the refresh token from the Authorization header
-	bearerToken, err := GetBearerToken(c.GetReqHeaders())
+	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
+	if refreshToken == "" {
+		return apperrors.ErrRefreshTokenNotFound
+	}
+	jwtToken, err := h.AuthService.RefreshToken(&ctx, refreshToken)
 	if err != nil {
 		return err
 	}
-	refreshToken, err := h.AuthService.RefreshToken(&ctx, bearerToken)
-	if err != nil {
-		return err
-	}
-	c.Status(http.StatusOK).JSON(refresh_tokens.RefreshTokenResponse{Token: refreshToken.Token})
+	c.Status(http.StatusOK).JSON(jwtToken)
 	return nil
 }
 
 // Logs out the user by revoking the refresh token.
 func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-	// Get the refresh token from the Authorization header
-	bearerToken, err := GetBearerToken(c.GetReqHeaders())
+	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
+	if refreshToken == "" {
+		return apperrors.ErrRefreshTokenNotFound
+	}
+	err := h.AuthService.Logout(&ctx, refreshToken)
 	if err != nil {
 		return err
 	}
-	err = h.AuthService.Logout(&ctx, bearerToken)
-	if err != nil {
-		return err
-	}
+	c.ClearCookie(REFRESH_TOKEN_COOKIE_NAME)
 	c.Status(http.StatusNoContent)
 	return nil
 }

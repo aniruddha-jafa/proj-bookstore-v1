@@ -15,6 +15,7 @@ export const login = async (
     {
       method: "POST",
       body: JSON.stringify(data),
+      credentials: "include",
     },
     loginResponseSchema,
   );
