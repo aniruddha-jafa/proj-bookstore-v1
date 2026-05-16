@@ -13,12 +13,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { loginFormSchema } from "@/schemas/auth";
-import type { z } from "zod";
-import API_ROUTES from "@/constants/api-routes";
+import { loginRequestSchema, type LoginRequest } from "@/features/auth/auth-schema";
 import MESSAGES from "@/constants/messages";
+import { login } from "@/features/auth/auth-api";
 
-type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 const LOGIN_SUCCESS_URL = "/";
 
@@ -29,36 +27,22 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
+  } = useForm<LoginRequest>({
+    resolver: zodResolver(loginRequestSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  async function onSubmit(values: LoginFormValues) {
+  async function onSubmit(values: LoginRequest) {
     try {
-      const res = await fetch(API_ROUTES.AUTH.LOGIN, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-      });
-
+      const res = await login(values);
       if (!res.ok) {
-        const body = await res.json();
-        let loginFailedMessage = `Login failed (${res.status})`;
-        if (body.message) {
-          loginFailedMessage = body.message;
-        }
-        console.error("Login failed:", loginFailedMessage);
-        toast.error(loginFailedMessage);
+        toast.error(res.message);
         return;
       }
-
+      console.log("DEBUG: Login successful", res.data);
       router.push(LOGIN_SUCCESS_URL);
       router.refresh();
     } catch {
