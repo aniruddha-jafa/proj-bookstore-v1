@@ -111,7 +111,7 @@ func InitServer() {
 	authGroup.Post("/logout", authHandler.Logout)
 
 	// User routes
-	userGroup := apiV1Group.Group("users")
+	userGroup := apiV1Group.Group("user")
 	userGroup.Get("/:id", middleware.RequireAuth, userHandler.Get)
 	userGroup.Post("/:id", middleware.RequireAuth, userHandler.Update)
 	userGroup.Get("/", userHandler.GetAll)

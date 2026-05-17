@@ -15,10 +15,6 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/util"
 )
 
-// Short validity for testing
-const DEFAULT_TOKEN_VALIDITY = time.Second * 30
-const DEFAULT_REFRESH_TOKEN_VALIDITY = time.Minute * 2
-
 type AuthService interface {
 	SignUp(ctx *context.Context, signupRequest users.UserCreationRequest) (users.UserResponse, error)
 	Login(ctx *context.Context, loginRequest LoginRequest) (LoginResponse, error)
@@ -51,6 +47,7 @@ func (s *AuthServiceImpl) SignUp(ctx *context.Context, signupRequest users.UserC
 func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest) (LoginResponse, error) {
 	log := logger.WithContext(s.baseLogger, *ctx)
 	log.Info("Logging in user", "email", loginRequest.Email)
+	appConfig := config.InitAppConfig()
 
 	// Lookup email
 	// Don't return a 404 to avoid leaking info that the user doesn't exist
@@ -68,7 +65,7 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 	}
 	// Create token
 	now := util.Now()
-	token, err := security.MakeJwt(user.ID, config.InitAppConfig().JwtSecret, DEFAULT_TOKEN_VALIDITY, now)
+	token, err := security.MakeJwt(user.ID, appConfig.JwtSecret, appConfig.AccessTokenValidity, now)
 	if err != nil {
 		return LoginResponse{}, errors.New("unable to create jwt: " + err.Error())
 	}
@@ -80,7 +77,7 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 	refreshToken, err := s.RefreshTokenRepo.Create(ctx, refresh_tokens.RefreshToken{
 		ID:        refreshTokenId,
 		UserID:    user.ID,
-		ExpiresAt: now.Add(DEFAULT_REFRESH_TOKEN_VALIDITY),
+		ExpiresAt: now.Add(appConfig.RefreshTokenValidity),
 		CreatedAt: now,
 		UpdatedAt: now,
 	})
@@ -100,6 +97,7 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 	// Check if it exists
 	refreshToken, err := s.RefreshTokenRepo.GetById(ctx, token)
 	if err != nil {
+		log.Error("Error getting refresh token", "error", err)
 		return refresh_tokens.RefreshTokenResponse{}, err
 	}
 	// Check if revoked
@@ -113,7 +111,8 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 	}
 	// Token is valid - create a new JWT
 	log.Info("Creating new JWT for refresh token", "refreshTokenId", refreshToken.ID)
-	newJwt, err := security.MakeJwt(refreshToken.UserID, config.InitAppConfig().JwtSecret, DEFAULT_TOKEN_VALIDITY, now)
+	appConfig := config.InitAppConfig()
+	newJwt, err := security.MakeJwt(refreshToken.UserID, appConfig.JwtSecret, appConfig.AccessTokenValidity, now)
 	if err != nil {
 		log.Error("Error creating new JWT", "error", err)
 		return refresh_tokens.RefreshTokenResponse{}, errors.New("unable to create jwt: " + err.Error())

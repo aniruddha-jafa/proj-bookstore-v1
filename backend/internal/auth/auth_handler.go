@@ -35,20 +35,24 @@ func NewAuthHandlerImpl(authService AuthService) AuthHandler {
 func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	log := logger.WithContext(h.baseLogger, ctx)
+
 	loginRequest := new(LoginRequest)
 	if err := c.BodyParser(loginRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to login request")
 	}
+
 	log.Info("Login request", "loginRequest", loginRequest.String())
 	err := loginRequest.Validate()
 	if err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, err.Error())
 	}
+
 	loginRes, err := h.AuthService.Login(&ctx, *loginRequest)
 	if err != nil {
 		log.Error("Login error", "error", err)
 		return err
 	}
+
 	refreshTokenCookie := h.getRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
 	c.Cookie(refreshTokenCookie)
 

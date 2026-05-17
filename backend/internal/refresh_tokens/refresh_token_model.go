@@ -10,7 +10,7 @@ import (
 )
 
 type RefreshToken struct {
-	ID        string    `json:"jwtToken"`
+	ID        string    `json:"-"`
 	UserID    uuid.UUID `json:"userId"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	RevokedAt time.Time `json:"revokedAt"`
@@ -37,5 +37,5 @@ func (r RefreshToken) String() string {
 }
 
 type RefreshTokenResponse struct {
-	Token string `json:"jwtToken"`
+	Token string `json:"token"`
 }

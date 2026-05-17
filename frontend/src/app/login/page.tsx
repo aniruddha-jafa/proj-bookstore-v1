@@ -20,8 +20,8 @@ import {
 import MESSAGES from "@/constants/messages";
 import { login } from "@/features/auth/auth-api";
 import { logger } from "@/lib/logger";
-
-const LOGIN_SUCCESS_URL = "/";
+import { useUserStore } from "@/features/user/user-auth-store";
+import { FRONTEND_ROUTES } from "@/constants/frontend-routes";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,6 +38,8 @@ export default function LoginPage() {
     },
   });
 
+  const { setUser, setAccessToken } = useUserStore();
+
   async function onSubmit(values: LoginRequest) {
     try {
       const res = await login(values);
@@ -46,7 +48,11 @@ export default function LoginPage() {
         return;
       }
       logger.info("login successful", { userId: res.data.id, email: res.data.email });
-      router.push(LOGIN_SUCCESS_URL);
+
+      setUser(res.data);
+      setAccessToken(res.data.token);
+
+      router.push(FRONTEND_ROUTES.PROFILE);
       router.refresh();
     } catch {
       toast.error(MESSAGES.LOGIN_ERROR);
