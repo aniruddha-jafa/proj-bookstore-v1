@@ -64,6 +64,8 @@ func InitServer() {
 		ErrorHandler: errorHandler,
 	})
 
+	app.Use(middleware.RequestID)
+
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: config.CORSAllowOrigin,
 		AllowMethods: strings.Join([]string{

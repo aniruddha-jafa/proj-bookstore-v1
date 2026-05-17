@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
@@ -9,6 +10,8 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/security"
 	"github.com/gofiber/fiber/v2"
 )
+
+const UserIdKey ctxKey = "userId"
 
 func RequireAuth(c *fiber.Ctx) error {
 	headers := c.GetReqHeaders()
@@ -21,6 +24,10 @@ func RequireAuth(c *fiber.Ctx) error {
 		log.Printf("Error validating JWT: %v", err)
 		return apperrors.ErrInvalidCredentials
 	}
+
+	ctx := context.WithValue(c.UserContext(), UserIdKey, userId.String())
+	c.SetUserContext(ctx)
+
 	c.Set("userId", userId.String())
 	return c.Next()
 }
