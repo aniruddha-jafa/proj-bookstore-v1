@@ -2,9 +2,10 @@ package users
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/security"
 	"github.com/google/uuid"
 )
@@ -20,7 +21,15 @@ type UserService interface {
 }
 
 type UserServiceImpl struct {
-	UserRepo UserRepo
+	UserRepo   UserRepo
+	baseLogger *slog.Logger
+}
+
+func NewUserServiceImpl(userRepo UserRepo) UserService {
+	return &UserServiceImpl{
+		UserRepo:   userRepo,
+		baseLogger: slog.Default().With(logger.LoggerNameKey, "UserService"),
+	}
 }
 
 func (u *UserServiceImpl) GetAll(ctx *context.Context) ([]UserResponse, error) {
@@ -32,7 +41,9 @@ func (u *UserServiceImpl) GetAll(ctx *context.Context) ([]UserResponse, error) {
 }
 
 func (u *UserServiceImpl) Get(ctx *context.Context, uuid uuid.UUID) (UserResponse, error) {
-	log.Printf("trying to get user with id: %s", uuid)
+	log := logger.WithContext(u.baseLogger, *ctx)
+	log.Info("Trying to get user with id", "userId", uuid)
+
 	user, err := u.UserRepo.Get(ctx, uuid)
 	if err != nil {
 		return UserResponse{}, err
@@ -48,9 +59,10 @@ func (u *UserServiceImpl) GetByEmail(ctx *context.Context, email string) (User, 
 	return user, nil
 }
 
-// TODO - validate email & password
 func (u *UserServiceImpl) Create(ctx *context.Context, userRequest UserCreationRequest) (UserResponse, error) {
-	log.Println("Trying to create a user")
+	log := logger.WithContext(u.baseLogger, *ctx)
+
+	log.Info("Trying to create a user")
 	hashedPassword, err := security.HashPassword(userRequest.Password)
 	if err != nil {
 		return UserResponse{}, err
@@ -74,7 +86,9 @@ func (u *UserServiceImpl) Create(ctx *context.Context, userRequest UserCreationR
 }
 
 func (u *UserServiceImpl) Update(ctx *context.Context, userId uuid.UUID, userUpdateRequest UserUpdateRequest) (UserResponse, error) {
-	log.Printf("Tyring to update a user")
+	log := logger.WithContext(u.baseLogger, *ctx)
+	log.Info("Trying to update a user", "userId", userId)
+
 	currentUser, err := u.UserRepo.Get(ctx, userId)
 	if err != nil {
 		return UserResponse{}, err

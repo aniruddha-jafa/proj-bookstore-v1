@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -46,12 +46,12 @@ func InitAppConfig() *AppConfig {
 		appConfig = &AppConfig{}
 		err := cleanenv.ReadConfig(".env", appConfig)
 		if err != nil {
-			log.Fatalf("Unable to read app config: %v", err)
+			slog.Error("Unable to read app config", "error", err)
 		}
 		if appConfig.CORSAllowOrigin == "*" {
-			log.Fatal("CORSAllowOrigins cannot be *")
+			slog.Error("CORSAllowOrigins cannot be *")
 		}
-		log.Printf("App config initialized: %s", appConfig)
+		slog.Info("App config initialized", "appConfig", appConfig.String())
 	})
 	return appConfig
 }

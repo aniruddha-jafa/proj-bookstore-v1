@@ -7,11 +7,10 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/auth"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/request_context"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/security"
 	"github.com/gofiber/fiber/v2"
 )
-
-const UserIdKey ctxKey = "userId"
 
 func RequireAuth(c *fiber.Ctx) error {
 	headers := c.GetReqHeaders()
@@ -25,7 +24,7 @@ func RequireAuth(c *fiber.Ctx) error {
 		return apperrors.ErrInvalidCredentials
 	}
 
-	ctx := context.WithValue(c.UserContext(), UserIdKey, userId.String())
+	ctx := context.WithValue(c.UserContext(), request_context.UserIdKey, userId.String())
 	c.SetUserContext(ctx)
 
 	c.Set("userId", userId.String())

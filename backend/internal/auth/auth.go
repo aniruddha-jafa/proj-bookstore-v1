@@ -3,7 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -38,7 +38,7 @@ func MakeRefreshToken() (string, error) {
 	}
 	refreshToken := hex.EncodeToString(buf)
 	if len(refreshToken) != REFRESH_TOKEN_BYTES*2 {
-		log.Printf("Unexpected refresh token length: %d, expected: %d", len(refreshToken), REFRESH_TOKEN_BYTES*2)
+		slog.Error("Unexpected refresh token length", "refreshTokenLength", len(refreshToken), "expectedLength", REFRESH_TOKEN_BYTES*2)
 		return "", apperrors.HttpError{Status: http.StatusInternalServerError, Message: "unable to create refresh token"}
 	}
 	return refreshToken, nil

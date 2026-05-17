@@ -2,10 +2,11 @@ package users
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	db "github.com/aniruddha-jafa/go-auth-v1/db/generated"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/util"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,12 +26,14 @@ type UserRepo interface {
 }
 
 type UserRepoImpl struct {
-	queries *db.Queries
+	queries    *db.Queries
+	baseLogger *slog.Logger
 }
 
-func NewUserRepoImpl(queries *db.Queries) UserRepoImpl {
-	return UserRepoImpl{
-		queries: queries,
+func NewUserRepoImpl(queries *db.Queries) UserRepo {
+	return &UserRepoImpl{
+		queries:    queries,
+		baseLogger: slog.Default().With(logger.LoggerNameKey, "UserRepo"),
 	}
 }
 
@@ -64,11 +67,12 @@ func (r *UserRepoImpl) GetByEmail(ctx *context.Context, email string) (User, err
 }
 
 func (r *UserRepoImpl) GetAll(ctx *context.Context) ([]User, error) {
+	log := logger.WithContext(r.baseLogger, *ctx)
 	pgUsers, err := r.queries.GetAllUsers(*ctx)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Found users: %d", len(pgUsers))
+	log.Info("Found users", "count", len(pgUsers))
 	users := make([]User, 0, len(pgUsers))
 	for _, u := range pgUsers {
 		domainUser, errDomainUser := ToDomain(&u)
@@ -77,7 +81,6 @@ func (r *UserRepoImpl) GetAll(ctx *context.Context) ([]User, error) {
 		}
 		users = append(users, *domainUser)
 	}
-	log.Printf("Converted %d pg users to %d domain users", len(users), len(pgUsers))
 	return users, nil
 }
 

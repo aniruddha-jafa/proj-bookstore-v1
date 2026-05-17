@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/auth"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/middleware"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
@@ -24,7 +26,7 @@ import (
 )
 
 func errorHandler(c *fiber.Ctx, err error) error {
-	log.Printf("ERROR: %v", err)
+	slog.Error("Error", "error", err)
 
 	// Check if it's an HttpError
 	if httpErr, ok := err.(apperrors.HttpError); ok {
@@ -54,6 +56,8 @@ func errorHandler(c *fiber.Ctx, err error) error {
 
 func InitServer() {
 	config := config.InitAppConfig()
+	logger.InitDefaultLogger(config)
+
 	pool, err := initDbConfig(config.DbConfig)
 	if err != nil {
 		panic(err)
@@ -87,21 +91,13 @@ func InitServer() {
 
 	// User
 	userRepo := users.NewUserRepoImpl(queries)
-	userService := users.UserServiceImpl{
-		UserRepo: &userRepo,
-	}
-	userHandler := users.UserHandlerImpl{
-		UserService: &userService,
-	}
+	userService := users.NewUserServiceImpl(userRepo)
+	userHandler := users.NewUserHandlerImpl(userService)
+
 	// Auth
 	refreshTokenRepo := refresh_tokens.NewRefreshTokenRepoImpl(queries)
-	authService := auth.AuthServiceImpl{
-		UserService:      &userService,
-		RefreshTokenRepo: &refreshTokenRepo,
-	}
-	authHandler := auth.AuthHandlerImpl{
-		AuthService: &authService,
-	}
+	authService := auth.NewAuthServiceImpl(userService, refreshTokenRepo)
+	authHandler := auth.NewAuthHandlerImpl(authService)
 
 	// Routes
 	apiGroup := app.Group("api")
@@ -121,7 +117,7 @@ func InitServer() {
 	userGroup.Get("/", userHandler.GetAll)
 
 	port := ":" + strconv.Itoa(config.Port)
-	log.Printf("Listening on port: %s", port)
+	slog.Info("Listening on port", "port", port)
 	log.Fatal(app.Listen(port))
 }
 
@@ -143,7 +139,7 @@ func initDbConfig(dbConfig config.DbConfig) (*pgxpool.Pool, error) {
 		connStr += fmt.Sprintf("sslmode=%s ", dbConfig.DbSSLMode)
 	}
 	connStr = strings.TrimSpace(connStr)
-	log.Printf("Connecting to DB with connection string: %s", connStr)
+	slog.Info("Connecting to DB", "connectionString", connStr)
 
 	db, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {

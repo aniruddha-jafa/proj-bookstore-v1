@@ -2,9 +2,10 @@ package refresh_tokens
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	db "github.com/aniruddha-jafa/go-auth-v1/db/generated"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/util"
 )
 
@@ -15,17 +16,20 @@ type RefreshTokenRepo interface {
 }
 
 type RefreshTokenRepoImpl struct {
-	queries *db.Queries
+	queries    *db.Queries
+	baseLogger *slog.Logger
 }
 
-func NewRefreshTokenRepoImpl(queries *db.Queries) RefreshTokenRepoImpl {
-	return RefreshTokenRepoImpl{
-		queries: queries,
+func NewRefreshTokenRepoImpl(queries *db.Queries) RefreshTokenRepo {
+	return &RefreshTokenRepoImpl{
+		queries:    queries,
+		baseLogger: slog.Default().With(logger.LoggerNameKey, "RefreshTokenRepo"),
 	}
 }
 
 func (r *RefreshTokenRepoImpl) Create(ctx *context.Context, refreshToken RefreshToken) (RefreshToken, error) {
-	log.Printf("Creating refresh token: %v", refreshToken)
+	log := logger.WithContext(r.baseLogger, *ctx)
+	log.Info("Creating refresh token", "refreshTokenId", refreshToken.ID)
 	refreshTokenCreated, err := r.queries.Create(*ctx, db.CreateParams{
 		ID:        refreshToken.ID,
 		UserID:    util.MakePgUuid(refreshToken.UserID),
@@ -56,7 +60,9 @@ func (r *RefreshTokenRepoImpl) GetById(ctx *context.Context, id string) (Refresh
 }
 
 func (r *RefreshTokenRepoImpl) Revoke(ctx *context.Context, refreshTokenId string) (RefreshToken, error) {
-	log.Printf("Revoking refresh token: %v", refreshTokenId)
+	log := logger.WithContext(r.baseLogger, *ctx)
+	log.Info("Revoking refresh token", "refreshTokenId", refreshTokenId)
+
 	now := util.Now()
 	revokedToken, err := r.queries.Revoke(*ctx, db.RevokeParams{
 		ID:        refreshTokenId,

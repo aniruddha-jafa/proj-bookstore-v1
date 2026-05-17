@@ -1,7 +1,6 @@
 package security
 
 import (
-	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -29,7 +28,6 @@ func MakeJwt(userId uuid.UUID, secret string, duration time.Duration, now time.T
 
 // Validates the given token and returns the user id on success
 func ValidateJwt(tokenString, secret string) (uuid.UUID, error) {
-	log.Printf("Trying to validate JWT token: %s", tokenString)
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 		// Must match the expected key type of the signing algo
 		return []byte(secret), nil

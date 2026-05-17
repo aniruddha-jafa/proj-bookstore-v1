@@ -3,11 +3,12 @@ package auth
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/security"
@@ -28,6 +29,15 @@ type AuthService interface {
 type AuthServiceImpl struct {
 	UserService      users.UserService
 	RefreshTokenRepo refresh_tokens.RefreshTokenRepo
+	baseLogger       *slog.Logger
+}
+
+func NewAuthServiceImpl(userService users.UserService, refreshTokenRepo refresh_tokens.RefreshTokenRepo) AuthService {
+	return &AuthServiceImpl{
+		UserService:      userService,
+		RefreshTokenRepo: refreshTokenRepo,
+		baseLogger:       slog.Default().With(logger.LoggerNameKey, "AuthService"),
+	}
 }
 
 func (s *AuthServiceImpl) SignUp(ctx *context.Context, signupRequest users.UserCreationRequest) (users.UserResponse, error) {
@@ -39,7 +49,9 @@ func (s *AuthServiceImpl) SignUp(ctx *context.Context, signupRequest users.UserC
 }
 
 func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest) (LoginResponse, error) {
-	log.Printf("Logging in user: %s", loginRequest)
+	log := logger.WithContext(s.baseLogger, *ctx)
+	log.Info("Logging in user", "email", loginRequest.Email)
+
 	// Lookup email
 	// Don't return a 404 to avoid leaking info that the user doesn't exist
 	user, err := s.UserService.GetByEmail(ctx, loginRequest.Email)
@@ -73,16 +85,18 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 		UpdatedAt: now,
 	})
 	if err != nil {
-		log.Printf("Error creating refresh token: %v", err)
+		log.Error("Error creating refresh token", "error", err)
 		return LoginResponse{}, errors.New("unable to create refresh token: " + err.Error())
 	}
-	log.Printf("Refresh token created for user %s: %s", user.ID, refreshToken.ID)
+	log.Info("Refresh token created", "userId", user.ID, "refreshTokenId", refreshToken.ID)
 	// Return response with user, token & refresh token info
 	return NewLoginResponse(user, token, refreshToken), nil
 }
 
 func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refresh_tokens.RefreshTokenResponse, error) {
-	log.Printf("Trying to refresh token: %s", token)
+	log := logger.WithContext(s.baseLogger, *ctx)
+	log.Info("Trying to refresh token")
+
 	// Check if it exists
 	refreshToken, err := s.RefreshTokenRepo.GetById(ctx, token)
 	if err != nil {
@@ -98,9 +112,10 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 		return refresh_tokens.RefreshTokenResponse{}, apperrors.ErrTokenExpired
 	}
 	// Token is valid - create a new JWT
-	log.Printf("Creating new JWT for refresh token: %s", refreshToken)
+	log.Info("Creating new JWT for refresh token", "refreshTokenId", refreshToken.ID)
 	newJwt, err := security.MakeJwt(refreshToken.UserID, config.InitAppConfig().JwtSecret, DEFAULT_TOKEN_VALIDITY, now)
 	if err != nil {
+		log.Error("Error creating new JWT", "error", err)
 		return refresh_tokens.RefreshTokenResponse{}, errors.New("unable to create jwt: " + err.Error())
 	}
 	// Return response with new token
@@ -108,6 +123,9 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 }
 
 func (s *AuthServiceImpl) Logout(ctx *context.Context, token string) error {
+	log := logger.WithContext(s.baseLogger, *ctx)
+	log.Info("Logging out user")
+
 	// Get the refresh token
 	refreshToken, err := s.RefreshTokenRepo.GetById(ctx, token)
 	if err != nil {
@@ -117,13 +135,13 @@ func (s *AuthServiceImpl) Logout(ctx *context.Context, token string) error {
 	// No need to check expiry
 	now := util.Now()
 	if !refreshToken.RevokedAt.IsZero() && refreshToken.RevokedAt.Before(now) {
-		log.Printf("Refresh token already revoked: %v", refreshToken)
+		log.Info("Refresh token already revoked", "refreshTokenId", refreshToken.ID, "revokedAt", refreshToken.RevokedAt.Format(time.RFC3339))
 		return nil
 	}
 	revokedToken, err := s.RefreshTokenRepo.Revoke(ctx, token)
 	if err != nil {
 		return err
 	}
-	log.Printf("Refresh token revoked at %s: %v", now.Format(time.RFC3339), revokedToken)
+	log.Info("Refresh token revoked", "refreshTokenId", revokedToken.ID, "revokedAt", now.Format(time.RFC3339))
 	return nil
 }

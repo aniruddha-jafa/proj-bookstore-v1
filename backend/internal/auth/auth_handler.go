@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,28 +22,37 @@ type AuthHandler interface {
 
 type AuthHandlerImpl struct {
 	AuthService AuthService
+	baseLogger  *slog.Logger
+}
+
+func NewAuthHandlerImpl(authService AuthService) AuthHandler {
+	return &AuthHandlerImpl{
+		AuthService: authService,
+		baseLogger:  slog.Default().With(logger.LoggerNameKey, "AuthHandler"),
+	}
 }
 
 func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 	ctx := c.UserContext()
+	log := logger.WithContext(h.baseLogger, ctx)
 	loginRequest := new(LoginRequest)
 	if err := c.BodyParser(loginRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to login request")
 	}
-	log.Printf("Login request: %s", loginRequest.String())
+	log.Info("Login request", "loginRequest", loginRequest.String())
 	err := loginRequest.Validate()
 	if err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, err.Error())
 	}
 	loginRes, err := h.AuthService.Login(&ctx, *loginRequest)
 	if err != nil {
-		log.Printf("Login error: %s", err)
+		log.Error("Login error", "error", err)
 		return err
 	}
 	refreshTokenCookie := h.getRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
 	c.Cookie(refreshTokenCookie)
 
-	log.Printf("Login successful for user: %v", loginRes)
+	log.Info("Login successful for user", "userId", loginRes.ID, "email", loginRes.Email)
 	c.Status(http.StatusOK).JSON(loginRes)
 	return nil
 }
@@ -61,23 +71,27 @@ func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expire
 }
 
 func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
-	log.Println("SignUp request received")
 	ctx := c.UserContext()
+	log := logger.WithContext(h.baseLogger, ctx)
+
+	log.Info("SignUp request received")
 	signupRequest := new(users.UserCreationRequest)
 	if err := c.BodyParser(signupRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to signup request")
 	}
-	log.Printf("SignUp request: %s", signupRequest)
+
+	log.Info("SignUp request", "signupRequest", signupRequest.String())
 	err := signupRequest.Validate()
 	if err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, err.Error())
 	}
+
 	userRes, err := h.AuthService.SignUp(&ctx, *signupRequest)
 	if err != nil {
-		log.Printf("SignUp error: %s", err)
+		log.Error("SignUp error", "error", err)
 		return err
 	}
-	log.Printf("SignUp response: %s", userRes)
+	log.Info("SignUp successful", "userId", userRes.ID, "email", userRes.Email)
 	c.Status(http.StatusCreated).JSON(userRes)
 	return nil
 }
