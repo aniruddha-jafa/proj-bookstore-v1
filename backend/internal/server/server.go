@@ -18,9 +18,11 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/middleware"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/request_context"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	loggerMiddleware "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib" // or your preferred SQL driver
 )
@@ -84,8 +86,20 @@ func InitServer() {
 		AllowCredentials: true,
 	}))
 
+	app.Use(loggerMiddleware.New(
+		loggerMiddleware.Config{
+			CustomTags: map[string]loggerMiddleware.LogFunc{
+				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c *fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
+					return output.WriteString(c.Get("X-Request-Id", ""))
+				},
+			},
+			Format: "{time: ${time}, method: ${method}, path: ${path}, status: ${status}, requestId: ${requestId}, ip: ${ip}, latency: ${latency}, error: ${error}}",
+		},
+	))
+
+	// Ping
 	app.Get("/ping", func(ctx *fiber.Ctx) error {
-		err := ctx.SendString("pong\n")
+		err := ctx.Status(http.StatusOK).JSON(fiber.Map{"message": "pong", "timestamp": time.Now().Format(time.RFC3339)})
 		return err
 	})
 
