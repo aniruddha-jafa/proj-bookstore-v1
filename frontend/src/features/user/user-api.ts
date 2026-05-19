@@ -1,18 +1,14 @@
-import API_ROUTES from "@/constants/api-routes";
-import { UserResponse, userResponseSchema } from "./user-schema";
-import { apiRequest, ApiResult } from "@/lib/api";
+import { API_PATHS } from '@/constants/api-routes'
+import { apiRequest, ApiResult } from '@/lib/api'
+import { UserResponse, userResponseSchema } from './user-schema'
 
-
-export const getUser = async (id: string, accessToken: string): Promise<ApiResult<UserResponse>> => {
+export const getUser = async (id: string): Promise<ApiResult<UserResponse>> => {
     const res = await apiRequest<UserResponse>(
-        API_ROUTES.USER.GET(id),
+        API_PATHS.USER.GET(id),
         {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
+            method: 'GET',
         },
-        userResponseSchema,
-    );
-    return res;
+        userResponseSchema
+    )
+    return res
 }

@@ -1,21 +1,23 @@
 /** Browser code must use NEXT_PUBLIC_*; server may use API_URL only. */
-const NEXT_PUBLIC_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/v1`;
+const NEXT_PUBLIC_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
 
-export const PAGE_PREFIXES = {
-  AUTH: "/auth",
-  USER: "/user",
-};
+const PATHS = {
+    AUTH: '/auth',
+    USER: '/user',
+}
 
-export const API_ROUTES = {
-  AUTH: {
-    LOGIN: `${NEXT_PUBLIC_API_URL}${PAGE_PREFIXES.AUTH}/login`,
-    SIGNUP: `${NEXT_PUBLIC_API_URL}${PAGE_PREFIXES.AUTH}/signup`,
-    REFRESH_TOKEN: `${NEXT_PUBLIC_API_URL}${PAGE_PREFIXES.AUTH}/refresh-token`,
-    LOGOUT: `${NEXT_PUBLIC_API_URL}${PAGE_PREFIXES.AUTH}/logout`,
-  },
-  USER: {
-    GET: (id: string) => `${NEXT_PUBLIC_API_URL}${PAGE_PREFIXES.USER}/${id}`,
-  },
-};
+export const API_URL = NEXT_PUBLIC_API_URL
 
-export default API_ROUTES;
+export const API_PATHS = {
+    AUTH: {
+        LOGIN: `${API_URL}/${PATHS.AUTH}/login`,
+        SIGNUP: `${API_URL}/${PATHS.AUTH}/signup`,
+        REFRESH_TOKEN: `${API_URL}/${PATHS.AUTH}/refresh-token`,
+        LOGOUT: `${API_URL}/${PATHS.AUTH}/logout`,
+    },
+    USER: {
+        GET: (id: string) => `${API_URL}/${PATHS.USER}/${id}`,
+    },
+}
+
+export default API_PATHS

@@ -1,15 +1,15 @@
-"use client";
+'use client'
 
-import { Toaster } from "sonner";
+import { Toaster } from 'sonner'
 
 export function ToasterDismissable() {
-  return (
-    <Toaster
-      richColors
-      closeButton
-      toastOptions={{
-        closeButtonAriaLabel: "Dismiss notification",
-      }}
-    />
-  );
+    return (
+        <Toaster
+            richColors
+            closeButton
+            toastOptions={{
+                closeButtonAriaLabel: 'Dismiss notification',
+            }}
+        />
+    )
 }

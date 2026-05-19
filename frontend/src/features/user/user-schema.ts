@@ -1,4 +1,4 @@
-import z from "zod";
+import z from 'zod'
 
 export const userResponseSchema = z.object({
     id: z.uuid(),
@@ -7,4 +7,4 @@ export const userResponseSchema = z.object({
     updatedAt: z.iso.datetime({ offset: true }),
 })
 
-export type UserResponse = z.infer<typeof userResponseSchema>;
+export type UserResponse = z.infer<typeof userResponseSchema>

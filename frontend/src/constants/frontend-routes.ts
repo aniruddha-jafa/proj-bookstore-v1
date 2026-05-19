@@ -1,3 +1,4 @@
 export const FRONTEND_ROUTES = {
-    PROFILE: "/profile",
+    PROFILE: '/profile',
+    LOGIN: '/login',
 }
