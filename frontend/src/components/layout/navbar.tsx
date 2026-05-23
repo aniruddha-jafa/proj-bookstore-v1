@@ -18,11 +18,13 @@ import {
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
+import { logout } from '@/features/auth/auth-api'
 import { useAuthStore } from '@/features/auth/auth-store'
 import { cn } from '@/lib/utils'
 import { BookOpen, LogOut, User } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 function userInitials(email: string) {
     return email[0]?.toUpperCase() ?? '?'
@@ -53,12 +55,18 @@ function NavbarBrand() {
 
 function UserAccountMenu({ email }: { email: string }) {
     const router = useRouter()
-    const logout = useAuthStore((s) => s.logout)
+    const { logout: logoutStore } = useAuthStore()
 
     async function handleLogout() {
-        await logout()
-        logout()
-        router.push(FRONTEND_ROUTES.LOGIN)
+        const res = await logout()
+        if (!res.ok) {
+            toast.error('Failed to logout')
+            return
+        }
+        logoutStore()
+        // Clear all history
+        router.replace(FRONTEND_ROUTES.LOGIN)
+        toast.success('Logged out')
     }
 
     return (

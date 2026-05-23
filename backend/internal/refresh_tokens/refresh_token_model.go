@@ -37,5 +37,6 @@ func (r RefreshToken) String() string {
 }
 
 type RefreshTokenResponse struct {
-	Token string `json:"token"`
+	Token  string    `json:"token"`
+	UserID uuid.UUID `json:"userId"`
 }

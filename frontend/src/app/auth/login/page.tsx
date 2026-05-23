@@ -1,6 +1,7 @@
 'use client'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Field,
     FieldError,
@@ -8,20 +9,19 @@ import {
     FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
+import MESSAGES from '@/constants/messages'
+import { login } from '@/features/auth/auth-api'
 import {
     loginRequestSchema,
     type LoginRequest,
 } from '@/features/auth/auth-schema'
-import MESSAGES from '@/constants/messages'
-import { login } from '@/features/auth/auth-api'
-import { logger } from '@/lib/logger'
 import { useAuthStore } from '@/features/auth/auth-store'
-import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
+import { logger } from '@/lib/logger'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -56,7 +56,6 @@ export default function LoginPage() {
             setAccessToken(res.data.token)
 
             router.push(FRONTEND_ROUTES.PROFILE)
-            router.refresh()
         } catch {
             toast.error(MESSAGES.LOGIN_ERROR)
         }

@@ -1,13 +1,10 @@
 import API_PATHS from '@/constants/api-routes'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
 import MESSAGES from '@/constants/messages'
-import {
-    RefreshTokenResponse,
-    refreshTokenResponseSchema,
-} from '@/features/auth/auth-schema'
-import { useAuthStore } from '@/features/auth/auth-store'
+import { logout, useAuthStore } from '@/features/auth/auth-store'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
+import { apiRefreshAcessToken } from './api-refresh-token'
 
 export type ApiSuccess<T> = { ok: true; status: number; data: T }
 export type ApiFailure = { ok: false; status: number; message: string }
@@ -16,6 +13,13 @@ export type ApiResult<T> = ApiSuccess<T> | ApiFailure
 type ApiOptions = RequestInit & {
     _skipRetryOnAuthFailure?: boolean
 }
+
+const AUTH_PATHS_NO_REFRESH_RETRY = [
+    API_PATHS.AUTH.REFRESH_TOKEN,
+    API_PATHS.AUTH.LOGIN,
+    API_PATHS.AUTH.SIGNUP,
+    API_PATHS.AUTH.LOGOUT,
+] as const
 
 /**
  * Make a request to the API and return the result.
@@ -50,10 +54,7 @@ export async function apiRequest<T>(
         const isUnauthorized = res.status === 401
         const shouldSkipRetry =
             options._skipRetryOnAuthFailure ||
-            url.startsWith(API_PATHS.AUTH.REFRESH_TOKEN) ||
-            url.startsWith(API_PATHS.AUTH.LOGIN) ||
-            url.startsWith(API_PATHS.AUTH.SIGNUP) ||
-            url.startsWith(API_PATHS.AUTH.LOGOUT)
+            AUTH_PATHS_NO_REFRESH_RETRY.some((path) => url.startsWith(path))
 
         // Unauthorized and already retried, return error
         if (isUnauthorized && shouldSkipRetry) {
@@ -70,11 +71,10 @@ export async function apiRequest<T>(
         if (isUnauthorized && !shouldSkipRetry) {
             options._skipRetryOnAuthFailure = true
 
-            const refreshTokenRes = await refreshToken()
-            const { accessToken: newAccessToken } = useAuthStore.getState()
+            const refreshTokenRes = await apiRefreshAcessToken()
 
-            if (!refreshTokenRes.ok || !newAccessToken) {
-                useAuthStore.getState().logout()
+            if (!refreshTokenRes.ok || !refreshTokenRes.data?.token) {
+                logout()
                 if (typeof window !== 'undefined') {
                     window.location.href = FRONTEND_ROUTES.LOGIN
                 }
@@ -84,7 +84,8 @@ export async function apiRequest<T>(
                     message: MESSAGES.ERROR_UNAUTHORIZED,
                 }
             }
-
+            const { token: newAccessToken } = refreshTokenRes.data
+            useAuthStore.getState().setAccessToken(newAccessToken)
             options.headers['Authorization'] = `Bearer ${newAccessToken}`
 
             return await apiRequest<T>(url, {
@@ -134,18 +135,4 @@ export async function apiRequest<T>(
             message: MESSAGES.ERROR_API_REQUEST_FAILED,
         }
     }
-}
-
-const refreshToken = async (): Promise<ApiResult<RefreshTokenResponse>> => {
-    const res = await apiRequest<RefreshTokenResponse>(
-        API_PATHS.AUTH.REFRESH_TOKEN,
-        {
-            method: 'POST',
-        },
-        refreshTokenResponseSchema
-    )
-    if (res.ok && res.data?.token) {
-        useAuthStore.getState().setAccessToken(res.data.token)
-    }
-    return res
 }

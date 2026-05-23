@@ -20,6 +20,7 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 
 export const refreshTokenResponseSchema = z.object({
     token: z.string(),
+    userId: z.uuid(),
 })
 
 export type RefreshTokenResponse = z.infer<typeof refreshTokenResponseSchema>

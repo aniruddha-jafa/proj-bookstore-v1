@@ -118,7 +118,7 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 		return refresh_tokens.RefreshTokenResponse{}, errors.New("unable to create jwt: " + err.Error())
 	}
 	// Return response with new token
-	return refresh_tokens.RefreshTokenResponse{Token: newJwt}, nil
+	return refresh_tokens.RefreshTokenResponse{Token: newJwt, UserID: refreshToken.UserID}, nil
 }
 
 func (s *AuthServiceImpl) Logout(ctx *context.Context, token string) error {

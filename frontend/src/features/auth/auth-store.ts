@@ -18,3 +18,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
     setAccessToken: (accessToken: string) => set({ accessToken }),
     logout: () => set({ user: null, accessToken: null, isLoading: false }),
 }))
+
+// Helper function to logout
+export const logout = () => {
+    useAuthStore.getState().logout()
+}
