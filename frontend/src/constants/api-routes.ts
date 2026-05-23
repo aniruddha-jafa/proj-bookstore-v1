@@ -2,7 +2,13 @@
 const NEXT_PUBLIC_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
 
 const PATHS = {
+    // Auth
     AUTH: '/auth',
+    LOGIN: '/login',
+    SIGNUP: '/signup',
+    REFRESH_TOKEN: '/refresh-token',
+    LOGOUT: '/logout',
+    // User
     USER: '/user',
 }
 
@@ -10,13 +16,13 @@ export const API_URL = NEXT_PUBLIC_API_URL
 
 export const API_PATHS = {
     AUTH: {
-        LOGIN: `${API_URL}/${PATHS.AUTH}/login`,
-        SIGNUP: `${API_URL}/${PATHS.AUTH}/signup`,
-        REFRESH_TOKEN: `${API_URL}/${PATHS.AUTH}/refresh-token`,
-        LOGOUT: `${API_URL}/${PATHS.AUTH}/logout`,
+        LOGIN: `${API_URL}${PATHS.AUTH}${PATHS.LOGIN}`,
+        SIGNUP: `${API_URL}${PATHS.AUTH}${PATHS.SIGNUP}`,
+        REFRESH_TOKEN: `${API_URL}${PATHS.AUTH}${PATHS.REFRESH_TOKEN}`,
+        LOGOUT: `${API_URL}${PATHS.AUTH}${PATHS.LOGOUT}`,
     },
     USER: {
-        GET: (id: string) => `${API_URL}/${PATHS.USER}/${id}`,
+        GET: (id: string) => `${API_URL}${PATHS.USER}/${id}`,
     },
 }
 
