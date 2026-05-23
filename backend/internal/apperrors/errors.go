@@ -24,7 +24,7 @@ var ErrMissingAuthorizationHeader = HttpError{Status: http.StatusUnauthorized, M
 var ErrMissingBearerToken = HttpError{Status: http.StatusUnauthorized, Message: "Missing bearer token"}
 var ErrTokenRevoked = HttpError{Status: http.StatusUnauthorized, Message: "Token revoked"}
 var ErrTokenExpired = HttpError{Status: http.StatusUnauthorized, Message: "Token expired"}
-var ErrRefreshTokenNotFound = HttpError{Status: http.StatusUnauthorized, Message: "Refresh token not found"}
+var ErrRefreshTokenCookieNotFound = HttpError{Status: http.StatusUnauthorized, Message: "Refresh token cookie not found"}
 
 type ErrorResponse struct {
 	Message string `json:"message"`

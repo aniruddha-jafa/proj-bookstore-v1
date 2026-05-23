@@ -15,6 +15,7 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/auth"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/middleware"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
@@ -114,20 +115,20 @@ func InitServer() {
 	authHandler := auth.NewAuthHandlerImpl(authService)
 
 	// Routes
-	apiGroup := app.Group("api")
-	apiV1Group := apiGroup.Group("v1")
+	apiGroup := app.Group(constants.API)
+	apiV1Group := apiGroup.Group(constants.V1)
 
 	// Auth routes
-	authGroup := apiV1Group.Group("auth")
-	authGroup.Post("/signup", authHandler.SignUp)
-	authGroup.Post("/login", authHandler.Login)
-	authGroup.Post("/refresh-token", authHandler.RefreshToken)
-	authGroup.Post("/logout", authHandler.Logout)
+	authGroup := apiV1Group.Group(constants.AUTH)
+	authGroup.Post(constants.SIGNUP, authHandler.SignUp)
+	authGroup.Post(constants.LOGIN, authHandler.Login)
+	authGroup.Post(constants.REFRESH_TOKEN, authHandler.RefreshToken)
+	authGroup.Post(constants.LOGOUT, authHandler.Logout)
 
 	// User routes
-	userGroup := apiV1Group.Group("user")
-	userGroup.Get("/:id", middleware.RequireAuth, userHandler.Get)
-	userGroup.Post("/:id", middleware.RequireAuth, userHandler.Update)
+	userGroup := apiV1Group.Group(constants.USER)
+	userGroup.Get(":id", middleware.RequireAuth, userHandler.Get)
+	userGroup.Post(":id", middleware.RequireAuth, userHandler.Update)
 	userGroup.Get("/", userHandler.GetAll)
 
 	port := ":" + strconv.Itoa(config.Port)

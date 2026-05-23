@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
@@ -69,7 +70,8 @@ func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expire
 		Expires:  expiresAt,
 		HTTPOnly: true,
 		Secure:   true,
-		Path:     "/api/v1/auth/refresh-token",
+		// Allow on all auth routes
+		Path: constants.API + constants.V1 + constants.AUTH,
 		// Allow cross-site requests from the frontend
 		SameSite: fiber.CookieSameSiteNoneMode,
 	}
@@ -106,7 +108,7 @@ func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
 	if refreshToken == "" {
-		return apperrors.ErrRefreshTokenNotFound
+		return apperrors.ErrRefreshTokenCookieNotFound
 	}
 	jwtToken, err := h.AuthService.RefreshToken(&ctx, refreshToken)
 	if err != nil {
@@ -121,7 +123,7 @@ func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
 	if refreshToken == "" {
-		return apperrors.ErrRefreshTokenNotFound
+		return apperrors.ErrRefreshTokenCookieNotFound
 	}
 	err := h.AuthService.Logout(&ctx, refreshToken)
 	if err != nil {
