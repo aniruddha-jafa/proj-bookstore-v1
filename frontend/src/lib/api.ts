@@ -44,7 +44,7 @@ export async function apiRequest<T>(
         const res = await fetch(url, {
             // Send cookies with request
             ...options,
-            credentials: options.credentials ?? 'include',
+            credentials: 'include',
         })
 
         const isUnauthorized = res.status === 401

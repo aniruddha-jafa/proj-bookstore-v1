@@ -69,6 +69,7 @@ func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expire
 		Expires:  expiresAt,
 		HTTPOnly: true,
 		Secure:   true,
+		Path:     "/api/v1/auth/refresh-token",
 		// Allow cross-site requests from the frontend
 		SameSite: fiber.CookieSameSiteNoneMode,
 	}
