@@ -126,6 +126,10 @@ func InitServer() {
 
 	// Auth routes
 	authGroup := apiV1Group.Group(constants.AUTH)
+
+	// Don't cache on auth routes
+	authGroup.Use(middleware.NoCache)
+
 	authGroup.Post(constants.SIGNUP, authHandler.SignUp)
 	authGroup.Post(constants.LOGIN, authHandler.Login)
 	authGroup.Post(constants.REFRESH_TOKEN, middleware.CSRF, authHandler.RefreshToken)

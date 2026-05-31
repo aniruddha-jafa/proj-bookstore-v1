@@ -19,6 +19,7 @@ type AuthService interface {
 	SignUp(ctx *context.Context, signupRequest users.UserCreationRequest) (users.UserResponse, error)
 	Login(ctx *context.Context, loginRequest LoginRequest) (LoginResponse, error)
 	RefreshToken(ctx *context.Context, refreshToken string) (refresh_tokens.RefreshTokenResponse, error)
+	ValidateRefreshToken(ctx *context.Context, refreshToken string, now time.Time) (refresh_tokens.RefreshToken, error)
 	Logout(ctx *context.Context, refreshToken string) error
 }
 
@@ -98,21 +99,14 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 	log := logger.WithContext(s.baseLogger, *ctx)
 	log.Info("Trying to refresh token")
 
-	// Check if it exists
-	refreshToken, err := s.RefreshTokenRepo.GetById(ctx, token)
+	// Check if it exists & is valid
+	now := util.Now()
+	refreshToken, err := s.ValidateRefreshToken(ctx, token, now)
 	if err != nil {
-		log.Error("Error getting refresh token", "error", err)
+		log.Error("Refresh token is not valid", "error", err)
 		return refresh_tokens.RefreshTokenResponse{}, err
 	}
-	// Check if revoked
-	now := util.Now()
-	if !refreshToken.RevokedAt.IsZero() && refreshToken.RevokedAt.Before(now) {
-		return refresh_tokens.RefreshTokenResponse{}, apperrors.ErrTokenRevoked
-	}
-	// Check if expired
-	if !refreshToken.ExpiresAt.IsZero() && refreshToken.ExpiresAt.Before(now) {
-		return refresh_tokens.RefreshTokenResponse{}, apperrors.ErrTokenExpired
-	}
+
 	// Token is valid - create a new JWT
 	log.Info("Creating new JWT for refresh token", "refreshTokenId", refreshToken.ID)
 	appConfig := config.InitAppConfig()
@@ -121,8 +115,26 @@ func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refr
 		log.Error("Error creating new JWT", "error", err)
 		return refresh_tokens.RefreshTokenResponse{}, errors.New("unable to create jwt: " + err.Error())
 	}
+
 	// Return response with new token
 	return refresh_tokens.RefreshTokenResponse{Token: newJwt, UserID: refreshToken.UserID}, nil
+}
+
+// Validates the refresh token and returns it if it is valid
+func (s *AuthServiceImpl) ValidateRefreshToken(ctx *context.Context, token string, now time.Time) (refresh_tokens.RefreshToken, error) {
+	refreshToken, err := s.RefreshTokenRepo.GetById(ctx, token)
+	if err != nil {
+		return refresh_tokens.RefreshToken{}, err
+	}
+	// Check if expired
+	if !refreshToken.ExpiresAt.IsZero() && refreshToken.ExpiresAt.Before(now) {
+		return refresh_tokens.RefreshToken{}, apperrors.ErrTokenExpired
+	}
+	// Check if revoked
+	if !refreshToken.RevokedAt.IsZero() && refreshToken.RevokedAt.Before(now) {
+		return refresh_tokens.RefreshToken{}, apperrors.ErrTokenRevoked
+	}
+	return refreshToken, nil
 }
 
 func (s *AuthServiceImpl) Logout(ctx *context.Context, token string) error {

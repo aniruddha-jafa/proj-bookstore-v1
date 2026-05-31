@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
-	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
+	"github.com/aniruddha-jafa/go-auth-v1/pkg/util"
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/fasthttp"
 )
 
 type AuthHandler interface {
@@ -54,8 +55,11 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	refreshTokenCookie := h.getRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
-	csrfTokenCookie := h.getCSRFTokenCookie(loginRes.CSRFToken)
+	refreshTokenCookie := h.createRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
+
+	// Reuse refresh token expiry for CSRF token
+	csrfTokenCookie := h.createCSRFTokenCookie(loginRes.CSRFToken, loginRes.RefreshTokenExpiresAt)
+
 	c.Cookie(refreshTokenCookie)
 	c.Cookie(csrfTokenCookie)
 
@@ -65,7 +69,7 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 }
 
 // Returns a fiber.Cookie for the refresh token
-func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expiresAt time.Time) *fiber.Cookie {
+func (h *AuthHandlerImpl) createRefreshTokenCookie(refreshTokenValue string, expiresAt time.Time) *fiber.Cookie {
 	return &fiber.Cookie{
 		Name:     constants.REFRESH_TOKEN_COOKIE_NAME,
 		Value:    refreshTokenValue,
@@ -79,23 +83,35 @@ func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expire
 	}
 }
 
-func (h *AuthHandlerImpl) getCSRFTokenCookie(csrfTokenValue string) *fiber.Cookie {
-	appConfig := config.InitAppConfig()
-	expiresAt := time.Now().Add(appConfig.CSRFTokenValidity)
+func (h *AuthHandlerImpl) createCSRFTokenCookie(csrfTokenValue string, expiresAt time.Time) *fiber.Cookie {
 	return &fiber.Cookie{
 		Name:     constants.CSRF_TOKEN_COOKIE_NAME,
 		Value:    csrfTokenValue,
 		Expires:  expiresAt,
-		HTTPOnly: false,
+		HTTPOnly: true,
 		Secure:   true,
 		Path:     constants.API + constants.V1 + constants.AUTH,
-		SameSite: fiber.CookieSameSiteLaxMode,
+		SameSite: fiber.CookieSameSiteNoneMode,
 	}
 }
 
 // Gets the CSRF token from the cookie if it exists, otherwise generates a new one and sets it in the cookie.
 func (h *AuthHandlerImpl) GetOrResetCSRFToken(c *fiber.Ctx) error {
-	log := logger.WithContext(h.baseLogger, c.UserContext())
+	ctx := c.UserContext()
+	log := logger.WithContext(h.baseLogger, ctx)
+
+	refreshTokenValue := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
+	if refreshTokenValue == "" {
+		log.Error("Refresh token not found in cookie")
+		return apperrors.ErrUnauthorized
+	}
+	now := util.Now()
+	refreshToken, err := h.AuthService.ValidateRefreshToken(&ctx, refreshTokenValue, now)
+	if err != nil {
+		log.Error("Refresh token is not valid", "error", err)
+		return apperrors.ErrUnauthorized
+	}
+
 	if c.Cookies(constants.CSRF_TOKEN_COOKIE_NAME) != "" {
 		log.Info("CSRF token found in cookie")
 		return c.Status(http.StatusOK).JSON(NewCsrfTokenResponse(c.Cookies(constants.CSRF_TOKEN_COOKIE_NAME)))
@@ -105,7 +121,9 @@ func (h *AuthHandlerImpl) GetOrResetCSRFToken(c *fiber.Ctx) error {
 		log.Error("Error generating CSRF token", "error", err)
 		return apperrors.ErrInternalServerError
 	}
-	c.Cookie(h.getCSRFTokenCookie(csrfTokenValue))
+
+	c.Cookie(h.createCSRFTokenCookie(csrfTokenValue, refreshToken.ExpiresAt))
+
 	c.Status(http.StatusOK).JSON(NewCsrfTokenResponse(csrfTokenValue))
 	log.Info("New CSRF token generated successfully")
 	return nil
@@ -155,16 +173,34 @@ func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 // Logs out the user by revoking the refresh token.
 func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
+	log := logger.WithContext(h.baseLogger, ctx)
+
 	refreshToken := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
+	csrfCookie := c.Cookies(constants.CSRF_TOKEN_COOKIE_NAME)
+
 	if refreshToken == "" {
 		return apperrors.ErrRefreshTokenCookieNotFound
 	}
+	if csrfCookie == "" {
+		log.Error("CSRF token not found in cookie")
+		return apperrors.ErrUnauthorized
+	}
+
 	err := h.AuthService.Logout(&ctx, refreshToken)
 	if err != nil {
 		return err
 	}
-	c.ClearCookie(constants.REFRESH_TOKEN_COOKIE_NAME)
-	c.ClearCookie(constants.CSRF_TOKEN_COOKIE_NAME)
+
+	// Recreate the cookies so we can get the same params to clear them
+	h.clearCookie(c, h.createRefreshTokenCookie(refreshToken, time.Time{}))
+	h.clearCookie(c, h.createCSRFTokenCookie(csrfCookie, time.Time{}))
+
 	c.Status(http.StatusNoContent)
 	return nil
+}
+
+func (h *AuthHandlerImpl) clearCookie(c *fiber.Ctx, cookie *fiber.Cookie) {
+	// Set the cookie to expire immediately
+	cookie.Expires = fasthttp.CookieExpireDelete
+	c.Cookie(cookie)
 }
