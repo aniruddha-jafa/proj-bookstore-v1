@@ -1,13 +1,16 @@
 import API_PATHS from '@/constants/api-routes'
 import { HTTP_METHOD } from '@/constants/http'
+import { HTTP_HEADER_NAMES } from '@/constants/http-header-names'
 import MESSAGES from '@/constants/messages'
 import {
+    CSRFTokenResponse,
+    csrfTokenResponseSchema,
     RefreshTokenResponse,
     refreshTokenResponseSchema,
 } from '@/features/auth/auth-schema'
 import { logout, useAuthStore } from '@/features/auth/auth-store'
 import { getUser } from '@/features/user/user-api'
-import { ApiResult, apiRequest } from './api'
+import { apiRequest, ApiResult } from './api'
 
 /**
  * Refreshes the access token and sets it in the auth store.
@@ -19,10 +22,43 @@ import { ApiResult, apiRequest } from './api'
 export const apiRefreshAcessToken = async (): Promise<
     ApiResult<RefreshTokenResponse>
 > => {
+    // If CSRF token is not set, get it from the API
+    if (!useAuthStore.getState().csrfToken) {
+        const csrfTokenRes = await apiRequest<CSRFTokenResponse>(
+            API_PATHS.AUTH.GET_CSRF_TOKEN,
+            {
+                method: HTTP_METHOD.GET,
+            },
+            csrfTokenResponseSchema
+        )
+        if (!csrfTokenRes.ok || !csrfTokenRes.data?.csrfToken) {
+            logout()
+            return {
+                ok: false,
+                status: 401,
+                message: MESSAGES.ERROR_UNAUTHORIZED,
+            }
+        }
+        useAuthStore.getState().setCsrfToken(csrfTokenRes.data.csrfToken)
+    }
+
+    const csrfToken = useAuthStore.getState().csrfToken
+    if (!csrfToken) {
+        logout()
+        return {
+            ok: false,
+            status: 401,
+            message: MESSAGES.ERROR_UNAUTHORIZED,
+        }
+    }
+
     const refreshTokenRes = await apiRequest<RefreshTokenResponse>(
         API_PATHS.AUTH.REFRESH_TOKEN,
         {
             method: HTTP_METHOD.POST,
+            headers: {
+                [HTTP_HEADER_NAMES.CSRF_TOKEN]: csrfToken,
+            },
         },
         refreshTokenResponseSchema
     )

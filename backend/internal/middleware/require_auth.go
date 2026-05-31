@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Requires authentication for the request
 func RequireAuth(c *fiber.Ctx) error {
 	headers := c.GetReqHeaders()
 	bearerToken, err := auth.GetBearerToken(headers)

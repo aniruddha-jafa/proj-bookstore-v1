@@ -4,6 +4,7 @@ const NEXT_PUBLIC_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
 const PATHS = {
     // Auth
     AUTH: '/auth',
+    CSRF_TOKEN: '/csrf-token',
     LOGIN: '/login',
     SIGNUP: '/signup',
     REFRESH_TOKEN: '/refresh-token',
@@ -16,6 +17,7 @@ export const API_URL = NEXT_PUBLIC_API_URL
 
 export const API_PATHS = {
     AUTH: {
+        GET_CSRF_TOKEN: `${API_URL}${PATHS.AUTH}${PATHS.CSRF_TOKEN}`,
         LOGIN: `${API_URL}${PATHS.AUTH}${PATHS.LOGIN}`,
         SIGNUP: `${API_URL}${PATHS.AUTH}${PATHS.SIGNUP}`,
         REFRESH_TOKEN: `${API_URL}${PATHS.AUTH}${PATHS.REFRESH_TOKEN}`,

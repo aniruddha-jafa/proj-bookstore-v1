@@ -33,18 +33,20 @@ type LoginResponse struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 	Token     string    `json:"token"`
+	CSRFToken string    `json:"csrfToken"`
 	// Not returned via JSON since it's stored in the cookie
 	RefreshToken          string    `json:"-"`
 	RefreshTokenExpiresAt time.Time `json:"-"`
 }
 
-func NewLoginResponse(user users.User, token string, refreshToken refresh_tokens.RefreshToken) LoginResponse {
+func NewLoginResponse(user users.User, token string, refreshToken refresh_tokens.RefreshToken, csrfToken string) LoginResponse {
 	return LoginResponse{
 		ID:                    user.ID,
 		Email:                 user.Email,
 		CreatedAt:             user.CreatedAt,
 		UpdatedAt:             user.UpdatedAt,
 		Token:                 token,
+		CSRFToken:             csrfToken,
 		RefreshToken:          refreshToken.ID,
 		RefreshTokenExpiresAt: refreshToken.ExpiresAt,
 	}
@@ -52,4 +54,18 @@ func NewLoginResponse(user users.User, token string, refreshToken refresh_tokens
 
 func (r LoginResponse) String() string {
 	return fmt.Sprintf("LoginResponse{ID: %s, Email: %s, CreatedAt: %s, UpdatedAt: %s, Token: *****, RefreshToken: *****}", r.ID, r.Email, r.CreatedAt, r.UpdatedAt)
+}
+
+type CsrfTokenResponse struct {
+	CSRFToken string `json:"csrfToken"`
+}
+
+func NewCsrfTokenResponse(csrfToken string) CsrfTokenResponse {
+	return CsrfTokenResponse{
+		CSRFToken: csrfToken,
+	}
+}
+
+func (r CsrfTokenResponse) String() string {
+	return fmt.Sprintf("CsrfTokenResponse{CSRFToken: *****}", r.CSRFToken)
 }

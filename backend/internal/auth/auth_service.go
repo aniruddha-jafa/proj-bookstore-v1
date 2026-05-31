@@ -70,7 +70,7 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 		return LoginResponse{}, errors.New("unable to create jwt: " + err.Error())
 	}
 	// Create refresh token
-	refreshTokenId, err := MakeRefreshToken()
+	refreshTokenId, err := makeRefreshToken()
 	if err != nil {
 		return LoginResponse{}, err
 	}
@@ -86,8 +86,12 @@ func (s *AuthServiceImpl) Login(ctx *context.Context, loginRequest LoginRequest)
 		return LoginResponse{}, errors.New("unable to create refresh token: " + err.Error())
 	}
 	log.Info("Refresh token created", "userId", user.ID, "refreshTokenId", refreshToken.ID)
+	csrfTokenValue, err := generateCSRFToken()
+	if err != nil {
+		return LoginResponse{}, errors.New("unable to generate CSRF token: " + err.Error())
+	}
 	// Return response with user, token & refresh token info
-	return NewLoginResponse(user, token, refreshToken), nil
+	return NewLoginResponse(user, token, refreshToken, csrfTokenValue), nil
 }
 
 func (s *AuthServiceImpl) RefreshToken(ctx *context.Context, token string) (refresh_tokens.RefreshTokenResponse, error) {

@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
+	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v2"
 )
 
-const REFRESH_TOKEN_COOKIE_NAME = "refreshToken"
-
 type AuthHandler interface {
 	Login(ctx *fiber.Ctx) error
 	SignUp(ctx *fiber.Ctx) error
 	RefreshToken(ctx *fiber.Ctx) error
+	GetOrResetCSRFToken(ctx *fiber.Ctx) error
 	Logout(ctx *fiber.Ctx) error
 }
 
@@ -55,7 +55,9 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 	}
 
 	refreshTokenCookie := h.getRefreshTokenCookie(loginRes.RefreshToken, loginRes.RefreshTokenExpiresAt)
+	csrfTokenCookie := h.getCSRFTokenCookie(loginRes.CSRFToken)
 	c.Cookie(refreshTokenCookie)
+	c.Cookie(csrfTokenCookie)
 
 	log.Info("Login successful for user", "userId", loginRes.ID, "email", loginRes.Email)
 	c.Status(http.StatusOK).JSON(loginRes)
@@ -65,7 +67,7 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 // Returns a fiber.Cookie for the refresh token
 func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expiresAt time.Time) *fiber.Cookie {
 	return &fiber.Cookie{
-		Name:     REFRESH_TOKEN_COOKIE_NAME,
+		Name:     constants.REFRESH_TOKEN_COOKIE_NAME,
 		Value:    refreshTokenValue,
 		Expires:  expiresAt,
 		HTTPOnly: true,
@@ -75,6 +77,38 @@ func (h *AuthHandlerImpl) getRefreshTokenCookie(refreshTokenValue string, expire
 		// Allow cross-site requests from the frontend
 		SameSite: fiber.CookieSameSiteNoneMode,
 	}
+}
+
+func (h *AuthHandlerImpl) getCSRFTokenCookie(csrfTokenValue string) *fiber.Cookie {
+	appConfig := config.InitAppConfig()
+	expiresAt := time.Now().Add(appConfig.CSRFTokenValidity)
+	return &fiber.Cookie{
+		Name:     constants.CSRF_TOKEN_COOKIE_NAME,
+		Value:    csrfTokenValue,
+		Expires:  expiresAt,
+		HTTPOnly: false,
+		Secure:   true,
+		Path:     constants.API + constants.V1 + constants.AUTH,
+		SameSite: fiber.CookieSameSiteLaxMode,
+	}
+}
+
+// Gets the CSRF token from the cookie if it exists, otherwise generates a new one and sets it in the cookie.
+func (h *AuthHandlerImpl) GetOrResetCSRFToken(c *fiber.Ctx) error {
+	log := logger.WithContext(h.baseLogger, c.UserContext())
+	if c.Cookies(constants.CSRF_TOKEN_COOKIE_NAME) != "" {
+		log.Info("CSRF token found in cookie")
+		return c.Status(http.StatusOK).JSON(NewCsrfTokenResponse(c.Cookies(constants.CSRF_TOKEN_COOKIE_NAME)))
+	}
+	csrfTokenValue, err := generateCSRFToken()
+	if err != nil {
+		log.Error("Error generating CSRF token", "error", err)
+		return apperrors.ErrInternalServerError
+	}
+	c.Cookie(h.getCSRFTokenCookie(csrfTokenValue))
+	c.Status(http.StatusOK).JSON(NewCsrfTokenResponse(csrfTokenValue))
+	log.Info("New CSRF token generated successfully")
+	return nil
 }
 
 func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
@@ -106,7 +140,7 @@ func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
 // Uses the refresh token to generate a new JWT,
 func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
+	refreshToken := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
 	if refreshToken == "" {
 		return apperrors.ErrRefreshTokenCookieNotFound
 	}
@@ -121,7 +155,7 @@ func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 // Logs out the user by revoking the refresh token.
 func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	ctx := c.UserContext()
-	refreshToken := c.Cookies(REFRESH_TOKEN_COOKIE_NAME)
+	refreshToken := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
 	if refreshToken == "" {
 		return apperrors.ErrRefreshTokenCookieNotFound
 	}
@@ -129,7 +163,8 @@ func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	c.ClearCookie(REFRESH_TOKEN_COOKIE_NAME)
+	c.ClearCookie(constants.REFRESH_TOKEN_COOKIE_NAME)
+	c.ClearCookie(constants.CSRF_TOKEN_COOKIE_NAME)
 	c.Status(http.StatusNoContent)
 	return nil
 }

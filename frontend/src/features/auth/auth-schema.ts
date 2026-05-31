@@ -14,6 +14,7 @@ export const loginResponseSchema = z.object({
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
     token: z.string(),
+    csrfToken: z.string(),
 })
 
 export type LoginResponse = z.infer<typeof loginResponseSchema>
@@ -24,3 +25,9 @@ export const refreshTokenResponseSchema = z.object({
 })
 
 export type RefreshTokenResponse = z.infer<typeof refreshTokenResponseSchema>
+
+export const csrfTokenResponseSchema = z.object({
+    csrfToken: z.string(),
+})
+
+export type CSRFTokenResponse = z.infer<typeof csrfTokenResponseSchema>

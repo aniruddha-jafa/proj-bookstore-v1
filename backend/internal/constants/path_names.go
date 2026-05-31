@@ -9,6 +9,7 @@ const (
 	SIGNUP        = "/signup"
 	REFRESH_TOKEN = "/refresh-token"
 	LOGOUT        = "/logout"
+	CSRF_TOKEN    = "/csrf-token"
 	// User
 	USER = "/user"
 	// Params

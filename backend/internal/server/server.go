@@ -83,7 +83,13 @@ func InitServer() {
 			fiber.MethodDelete,
 			fiber.MethodOptions,
 		}, ","),
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders: strings.Join([]string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			constants.CSRF_TOKEN_HEADER,
+		}, ","),
 		AllowCredentials: true,
 	}))
 
@@ -91,7 +97,7 @@ func InitServer() {
 		loggerMiddleware.Config{
 			CustomTags: map[string]loggerMiddleware.LogFunc{
 				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c *fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
-					return output.WriteString(c.Get("X-Request-Id", ""))
+					return output.WriteString(c.Get(constants.REQUEST_ID_HEADER, ""))
 				},
 			},
 			Format: "{time: ${time}, method: ${method}, path: ${path}, status: ${status}, requestId: ${requestId}, ip: ${ip}, latency: ${latency}, error: ${error}}",
@@ -122,8 +128,9 @@ func InitServer() {
 	authGroup := apiV1Group.Group(constants.AUTH)
 	authGroup.Post(constants.SIGNUP, authHandler.SignUp)
 	authGroup.Post(constants.LOGIN, authHandler.Login)
-	authGroup.Post(constants.REFRESH_TOKEN, authHandler.RefreshToken)
-	authGroup.Post(constants.LOGOUT, authHandler.Logout)
+	authGroup.Post(constants.REFRESH_TOKEN, middleware.CSRF, authHandler.RefreshToken)
+	authGroup.Post(constants.LOGOUT, middleware.CSRF, authHandler.Logout)
+	authGroup.Get(constants.CSRF_TOKEN, authHandler.GetOrResetCSRFToken)
 
 	// User routes
 	userGroup := apiV1Group.Group(constants.USER)

@@ -13,6 +13,7 @@ import (
 const AUTHORIZATION string = "Authorization"
 const BEARER string = "Bearer " // space is required
 const REFRESH_TOKEN_BYTES = 32
+const CSRF_TOKEN_BYTES = 32
 
 func GetBearerToken(headers http.Header) (string, error) {
 	if headers == nil || headers.Get(AUTHORIZATION) == "" {
@@ -30,7 +31,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return headersSlice[1], nil
 }
 
-func MakeRefreshToken() (string, error) {
+func makeRefreshToken() (string, error) {
 	buf := make([]byte, REFRESH_TOKEN_BYTES)
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -42,4 +43,14 @@ func MakeRefreshToken() (string, error) {
 		return "", apperrors.HttpError{Status: http.StatusInternalServerError, Message: "unable to create refresh token"}
 	}
 	return refreshToken, nil
+}
+
+func generateCSRFToken() (string, error) {
+	buf := make([]byte, CSRF_TOKEN_BYTES)
+	_, err := rand.Read(buf)
+	if err != nil {
+		slog.Error("Error generating CSRF token", "error", err)
+		return "", apperrors.HttpError{Status: http.StatusInternalServerError, Message: "unable to generate CSRF token"}
+	}
+	return hex.EncodeToString(buf), nil
 }

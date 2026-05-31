@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 
+	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/request_context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 
 // Adds a request ID to the context
 func RequestID(c *fiber.Ctx) error {
-	requestID := c.Get("X-Request-ID", "")
+	requestID := c.Get(constants.REQUEST_ID_HEADER, "")
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
@@ -18,7 +19,7 @@ func RequestID(c *fiber.Ctx) error {
 	ctx := context.WithValue(c.UserContext(), request_context.RequestIdKey, requestID)
 	c.SetUserContext(ctx)
 
-	c.Set("X-Request-Id", requestID)
+	c.Set(constants.REQUEST_ID_HEADER, requestID)
 
 	return c.Next()
 }

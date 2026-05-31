@@ -64,7 +64,6 @@ function UserAccountMenu({ email }: { email: string }) {
             return
         }
         logoutStore()
-        // Clear all history
         router.replace(FRONTEND_ROUTES.LOGIN)
         toast.success('Logged out')
     }

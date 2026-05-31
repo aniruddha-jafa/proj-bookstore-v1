@@ -1,5 +1,6 @@
 import API_PATHS from '@/constants/api-routes'
 import { HTTP_METHOD } from '@/constants/http'
+import { HTTP_HEADER_NAMES } from '@/constants/http-header-names'
 import type { ApiResult } from '@/lib/api/api'
 import { apiRequest } from '@/lib/api/api'
 import { apiRefreshAcessToken } from '@/lib/api/api-refresh-token'
@@ -9,6 +10,7 @@ import {
     loginResponseSchema,
     RefreshTokenResponse,
 } from './auth-schema'
+import { useAuthStore } from './auth-store'
 
 export const login = async (
     data: LoginRequest
@@ -27,6 +29,10 @@ export const login = async (
 export const logout = async (): Promise<ApiResult<void>> => {
     const res = await apiRequest<void>(API_PATHS.AUTH.LOGOUT, {
         method: HTTP_METHOD.POST,
+        headers: {
+            [HTTP_HEADER_NAMES.CSRF_TOKEN]:
+                useAuthStore.getState().csrfToken ?? '',
+        },
     })
     return res
 }

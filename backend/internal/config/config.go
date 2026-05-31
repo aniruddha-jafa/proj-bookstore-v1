@@ -19,6 +19,7 @@ type AppConfig struct {
 	CORSAllowOrigin      string        `env:"CORS_ALLOW_ORIGIN"`
 	RefreshTokenValidity time.Duration `env:"REFRESH_TOKEN_VALIDITY"`
 	AccessTokenValidity  time.Duration `env:"ACCESS_TOKEN_VALIDITY"`
+	CSRFTokenValidity    time.Duration `env:"CSRF_TOKEN_VALIDITY"`
 	DbConfig             DbConfig
 }
 
@@ -65,12 +66,19 @@ func ValidateSecurityConfig(appConfig *AppConfig) {
 	if appConfig.CORSAllowOrigin == "*" {
 		log.Fatal("CORSAllowOrigins cannot be *")
 	}
-	if appConfig.RefreshTokenValidity <= 0 || appConfig.AccessTokenValidity <= 0 {
-		log.Fatal("RefreshTokenValidity and AccessTokenValidity must be set")
+	if appConfig.RefreshTokenValidity <= 0 {
+		log.Fatal("RefreshTokenValidity must be set")
+	}
+	if appConfig.AccessTokenValidity <= 0 {
+		log.Fatal("AccessTokenValidity must be set")
 	}
 	if appConfig.RefreshTokenValidity <= appConfig.AccessTokenValidity {
 		log.Fatal("RefreshTokenValidity must be greater than AccessTokenValidity")
 	}
+
+	// For now - CSRF token validity is the same as refresh token validity
+	appConfig.CSRFTokenValidity = appConfig.RefreshTokenValidity
+
 	if appConfig.AppEnv == "prod" {
 		if appConfig.RefreshTokenValidity < MIN_REFRESH_TOKEN_VALIDITY_PROD {
 			appConfig.RefreshTokenValidity = MIN_REFRESH_TOKEN_VALIDITY_PROD

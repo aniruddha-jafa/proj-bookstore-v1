@@ -16,6 +16,7 @@ func (h HttpError) Error() string {
 	return h.Message
 }
 
+var ErrInternalServerError = HttpError{Status: http.StatusInternalServerError, Message: "Internal server error"}
 var ErrNotFound = HttpError{Status: http.StatusNotFound, Message: "resource not found"}
 var ErrInvalidParams = HttpError{Status: http.StatusBadGateway, Message: "invalid params"}
 var ErrEmailTaken = HttpError{Status: http.StatusConflict, Message: "email is taken"}
@@ -25,6 +26,7 @@ var ErrMissingBearerToken = HttpError{Status: http.StatusUnauthorized, Message: 
 var ErrTokenRevoked = HttpError{Status: http.StatusUnauthorized, Message: "Token revoked"}
 var ErrTokenExpired = HttpError{Status: http.StatusUnauthorized, Message: "Token expired"}
 var ErrRefreshTokenCookieNotFound = HttpError{Status: http.StatusUnauthorized, Message: "Refresh token cookie not found"}
+var ErrUnauthorized = HttpError{Status: http.StatusUnauthorized, Message: "Unauthorized"}
 
 type ErrorResponse struct {
 	Message string `json:"message"`
