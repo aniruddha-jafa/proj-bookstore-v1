@@ -8,7 +8,7 @@ import {
     RefreshTokenResponse,
     refreshTokenResponseSchema,
 } from '@/features/auth/auth-schema'
-import { logout, useAuthStore } from '@/features/auth/auth-store'
+import { useAuthStore } from '@/features/auth/auth-store'
 import { getUser } from '@/features/user/user-api'
 import { apiRequest, ApiResult } from './api'
 
@@ -23,7 +23,9 @@ export const apiRefreshAcessToken = async (): Promise<
     ApiResult<RefreshTokenResponse>
 > => {
     // If CSRF token is not set, get it from the API
-    if (!useAuthStore.getState().csrfToken) {
+
+    let csrfToken = useAuthStore.getState().csrfToken
+    if (!csrfToken) {
         const csrfTokenRes = await apiRequest<CSRFTokenResponse>(
             API_PATHS.AUTH.GET_CSRF_TOKEN,
             {
@@ -32,24 +34,14 @@ export const apiRefreshAcessToken = async (): Promise<
             csrfTokenResponseSchema
         )
         if (!csrfTokenRes.ok || !csrfTokenRes.data?.csrfToken) {
-            logout()
+            useAuthStore.getState().logout()
             return {
                 ok: false,
                 status: 401,
                 message: MESSAGES.ERROR_UNAUTHORIZED,
             }
         }
-        useAuthStore.getState().setCsrfToken(csrfTokenRes.data.csrfToken)
-    }
-
-    const csrfToken = useAuthStore.getState().csrfToken
-    if (!csrfToken) {
-        logout()
-        return {
-            ok: false,
-            status: 401,
-            message: MESSAGES.ERROR_UNAUTHORIZED,
-        }
+        csrfToken = csrfTokenRes.data.csrfToken
     }
 
     const refreshTokenRes = await apiRequest<RefreshTokenResponse>(
@@ -62,12 +54,13 @@ export const apiRefreshAcessToken = async (): Promise<
         },
         refreshTokenResponseSchema
     )
+
     if (
         !refreshTokenRes.ok ||
         !refreshTokenRes.data?.token ||
         !refreshTokenRes.data?.userId
     ) {
-        logout()
+        useAuthStore.getState().logout()
         return {
             ok: false,
             status: 401,
@@ -75,31 +68,31 @@ export const apiRefreshAcessToken = async (): Promise<
         }
     }
     const { token, userId } = refreshTokenRes.data
-    useAuthStore.getState().setAccessToken(token)
 
     // If user is not set, get the user from the API
-    if (!useAuthStore.getState().user) {
+    let user = useAuthStore.getState().user
+    if (!user) {
         const userRes = await getUser(userId)
-        if (!userRes.ok) {
-            logout()
+
+        if (!userRes.ok || !userRes.data) {
+            useAuthStore.getState().logout()
             return {
                 ok: false,
                 status: userRes.status,
-                message: MESSAGES.ERROR_API_REQUEST_FAILED,
+                message: MESSAGES.ERROR_UNAUTHORIZED,
             }
         }
-        useAuthStore.getState().setUser(userRes.data)
+
+        user = userRes.data
     }
 
-    // User ID should match with store
-    if (userId !== useAuthStore.getState().user?.id) {
-        logout()
-        return {
-            ok: false,
-            status: 401,
-            message: MESSAGES.ERROR_UNAUTHORIZED,
-        }
+    if (user && user.id !== userId) {
+        useAuthStore.getState().logout()
+        return { ok: false, status: 401, message: MESSAGES.ERROR_UNAUTHORIZED }
     }
+
+    // Success - set logged in state
+    useAuthStore.getState().setOnLoginSuccess(user, token, csrfToken)
 
     return refreshTokenRes
 }

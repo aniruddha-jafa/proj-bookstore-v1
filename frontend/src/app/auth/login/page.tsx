@@ -38,7 +38,7 @@ export default function LoginPage() {
         },
     })
 
-    const { setUser, setAccessToken, setCsrfToken } = useAuthStore()
+    const { setOnLoginSuccess } = useAuthStore()
 
     async function onSubmit(values: LoginRequest) {
         try {
@@ -51,10 +51,7 @@ export default function LoginPage() {
                 userId: res.data.id,
                 email: res.data.email,
             })
-
-            setUser(res.data)
-            setAccessToken(res.data.token)
-            setCsrfToken(res.data.csrfToken)
+            setOnLoginSuccess(res.data, res.data.token, res.data.csrfToken)
 
             router.push(FRONTEND_ROUTES.PROFILE)
         } catch {

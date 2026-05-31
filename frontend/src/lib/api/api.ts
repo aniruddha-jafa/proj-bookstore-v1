@@ -1,7 +1,7 @@
 import API_PATHS from '@/constants/api-routes'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
 import MESSAGES from '@/constants/messages'
-import { logout, useAuthStore } from '@/features/auth/auth-store'
+import { useAuthStore } from '@/features/auth/auth-store'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { apiRefreshAcessToken } from './api-refresh-token'
@@ -75,7 +75,7 @@ export async function apiRequest<T>(
             const refreshTokenRes = await apiRefreshAcessToken()
 
             if (!refreshTokenRes.ok || !refreshTokenRes.data?.token) {
-                logout()
+                useAuthStore.getState().logout()
                 if (typeof window !== 'undefined') {
                     window.location.href = FRONTEND_ROUTES.LOGIN
                 }
@@ -86,7 +86,6 @@ export async function apiRequest<T>(
                 }
             }
             const { token: newAccessToken } = refreshTokenRes.data
-            useAuthStore.getState().setAccessToken(newAccessToken)
             options.headers['Authorization'] = `Bearer ${newAccessToken}`
 
             return await apiRequest<T>(url, {

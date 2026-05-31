@@ -1,6 +1,6 @@
 'use client'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
-import { useAuthStore } from '@/features/auth/auth-store'
+import { SessionState, useAuthStore } from '@/features/auth/auth-store'
 import { apiRefreshAcessToken } from '@/lib/api/api-refresh-token'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -15,15 +15,22 @@ const AUTH_STATE = {
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const [authState, setAuthState] = useState(AUTH_STATE.LOADING)
-    const { user, accessToken } = useAuthStore()
+    const { user, accessToken, sessionState } = useAuthStore()
 
     useEffect(() => {
         async function bootstrap() {
+            // If the user logged out, don't try to refresh
+            if (sessionState === SessionState.ENDED) {
+                setAuthState(AUTH_STATE.UNAUTHENTICATED)
+                return
+            }
+
             // Already authenticated - return
-            if (user && accessToken) {
+            if (user && accessToken && sessionState === SessionState.ACTIVE) {
                 setAuthState(AUTH_STATE.AUTHENTICATED)
                 return
             }
+
             // Try refreshing the token e.g. on page refresh
             const res = await apiRefreshAcessToken()
             if (!res.ok) {
@@ -33,7 +40,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             setAuthState(AUTH_STATE.AUTHENTICATED)
         }
         bootstrap()
-    }, [user, accessToken])
+    }, [user, accessToken, sessionState])
 
     useEffect(() => {
         if (authState === AUTH_STATE.UNAUTHENTICATED) {
