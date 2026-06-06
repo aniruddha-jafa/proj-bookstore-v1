@@ -18,6 +18,7 @@ import {
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
+import MESSAGES from '@/constants/messages'
 import { logout } from '@/features/auth/auth-api'
 import { useAuthStore } from '@/features/auth/auth-store'
 import { cn } from '@/lib/utils'
@@ -60,12 +61,12 @@ function UserAccountMenu({ email }: { email: string }) {
     async function handleLogout() {
         const res = await logout()
         if (!res.ok) {
-            toast.error('Failed to logout')
+            toast.error(MESSAGES.LOGGED_OUT_ERROR)
             return
         }
         logoutStore()
         router.replace(FRONTEND_ROUTES.LOGIN)
-        toast.success('Logged out')
+        toast.success(MESSAGES.LOGGED_OUT_SUCCESS)
     }
 
     return (
