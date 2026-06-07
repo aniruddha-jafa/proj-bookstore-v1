@@ -23,6 +23,7 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	loggerMiddleware "github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -149,6 +150,25 @@ func registerGlobalMiddleware(app *fiber.App, config *config.AppConfig) {
 			Format: "{time: ${time}, method: ${method}, path: ${path}, status: ${status}, requestId: ${requestId}, ip: ${ip}, latency: ${latency}, error: ${error}}",
 		},
 	))
+
+	app.Use(limiter.New(limiter.Config{
+		MaxFunc: func(c fiber.Ctx) int {
+			switch {
+			case strings.HasPrefix(c.Path(), constants.AUTH):
+				return 5 // strict: 5 per window for auth
+			default:
+				return 60 // generous: 60 per window for other routes
+			}
+		},
+		ExpirationFunc: func(c fiber.Ctx) time.Duration {
+			switch {
+			case strings.HasPrefix(c.Path(), constants.AUTH):
+				return 5 * time.Minute // strict: 5 minutes for auth
+			default:
+				return time.Minute // generous: 1 minute for other routes
+			}
+		},
+	}))
 }
 
 func initDbConfig(dbConfig config.DbConfig) (*pgxpool.Pool, error) {
