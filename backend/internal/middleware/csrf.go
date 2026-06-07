@@ -5,10 +5,10 @@ import (
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/constants"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
-func CSRF(c *fiber.Ctx) error {
+func CSRF(c fiber.Ctx) error {
 	csrfToken := c.Get(constants.CSRF_TOKEN_HEADER, "")
 	if csrfToken == "" {
 		return apperrors.ErrUnauthorized

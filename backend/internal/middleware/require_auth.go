@@ -9,11 +9,11 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/config"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/request_context"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/security"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Requires authentication for the request
-func RequireAuth(c *fiber.Ctx) error {
+func RequireAuth(c fiber.Ctx) error {
 	headers := c.GetReqHeaders()
 	bearerToken, err := auth.GetBearerToken(headers)
 	if err != nil {
@@ -25,9 +25,11 @@ func RequireAuth(c *fiber.Ctx) error {
 		return apperrors.ErrInvalidCredentials
 	}
 
-	ctx := context.WithValue(c.UserContext(), request_context.UserIdKey, userId.String())
-	c.SetUserContext(ctx)
+	ctx := context.WithValue(c.Context(), request_context.UserIdKey, userId.String())
+	c.SetContext(ctx)
 
 	c.Set("userId", userId.String())
 	return c.Next()
 }
+
+// fiber:context-methods migrated

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,22 @@ type AppConfig struct {
 
 func (appConfig *AppConfig) String() string {
 	return fmt.Sprintf("AppEnv: %s, Port: %d, CORSAllowOrigin: %s, RefreshTokenValidity: %s, AccessTokenValidity: %s, DbConfig: %v", appConfig.AppEnv, appConfig.Port, appConfig.CORSAllowOrigin, appConfig.RefreshTokenValidity, appConfig.AccessTokenValidity, appConfig.DbConfig)
+}
+
+func (appConfig *AppConfig) CORSAllowOrigins() []string {
+	if appConfig.CORSAllowOrigin == "" {
+		return nil
+	}
+
+	parts := strings.Split(appConfig.CORSAllowOrigin, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
 }
 
 func (dbConfig *DbConfig) String() string {

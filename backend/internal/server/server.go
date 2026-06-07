@@ -21,14 +21,14 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/refresh_tokens"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/request_context"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	loggerMiddleware "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	loggerMiddleware "github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib" // or your preferred SQL driver
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func errorHandler(c *fiber.Ctx, err error) error {
+func errorHandler(c fiber.Ctx, err error) error {
 	slog.Error("Error", "error", err)
 
 	// Check if it's an HttpError
@@ -67,15 +67,13 @@ func InitServer() {
 	}
 	queries := db.New(pool)
 
-	app := fiber.New(fiber.Config{
-		ErrorHandler: errorHandler,
-	})
+	app := fiber.New(fiber.Config{ErrorHandler: errorHandler})
 
 	// Global middleware
 	registerGlobalMiddleware(app, config)
 
 	// Ping
-	app.Get("/ping", func(ctx *fiber.Ctx) error {
+	app.Get("/ping", func(ctx fiber.Ctx) error {
 		err := ctx.Status(http.StatusOK).JSON(fiber.Map{"message": "pong", "timestamp": time.Now().Format(time.RFC3339)})
 		return err
 	})
@@ -122,29 +120,29 @@ func registerGlobalMiddleware(app *fiber.App, config *config.AppConfig) {
 	app.Use(middleware.RequestID)
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: config.CORSAllowOrigin,
-		AllowMethods: strings.Join([]string{
+		AllowOrigins: config.CORSAllowOrigins(),
+		AllowMethods: []string{
 			fiber.MethodGet,
 			fiber.MethodPost,
 			fiber.MethodPut,
 			fiber.MethodPatch,
 			fiber.MethodDelete,
 			fiber.MethodOptions,
-		}, ","),
-		AllowHeaders: strings.Join([]string{
+		},
+		AllowHeaders: []string{
 			"Origin",
 			"Content-Type",
 			"Accept",
 			"Authorization",
 			constants.CSRF_TOKEN_HEADER,
-		}, ","),
+		},
 		AllowCredentials: true,
 	}))
 
 	app.Use(loggerMiddleware.New(
 		loggerMiddleware.Config{
 			CustomTags: map[string]loggerMiddleware.LogFunc{
-				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c *fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
+				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
 					return output.WriteString(c.Get(constants.REQUEST_ID_HEADER, ""))
 				},
 			},

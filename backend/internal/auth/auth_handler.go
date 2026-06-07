@@ -10,16 +10,16 @@ import (
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/users"
 	"github.com/aniruddha-jafa/go-auth-v1/pkg/util"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/valyala/fasthttp"
 )
 
 type AuthHandler interface {
-	Login(ctx *fiber.Ctx) error
-	SignUp(ctx *fiber.Ctx) error
-	RefreshToken(ctx *fiber.Ctx) error
-	GetOrResetCSRFToken(ctx *fiber.Ctx) error
-	Logout(ctx *fiber.Ctx) error
+	Login(ctx fiber.Ctx) error
+	SignUp(ctx fiber.Ctx) error
+	RefreshToken(ctx fiber.Ctx) error
+	GetOrResetCSRFToken(ctx fiber.Ctx) error
+	Logout(ctx fiber.Ctx) error
 }
 
 type AuthHandlerImpl struct {
@@ -34,12 +34,12 @@ func NewAuthHandlerImpl(authService AuthService) AuthHandler {
 	}
 }
 
-func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (h *AuthHandlerImpl) Login(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(h.baseLogger, ctx)
 
 	loginRequest := new(LoginRequest)
-	if err := c.BodyParser(loginRequest); err != nil {
+	if err := c.Bind().Body(loginRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to login request")
 	}
 
@@ -96,8 +96,8 @@ func (h *AuthHandlerImpl) createCSRFTokenCookie(csrfTokenValue string, expiresAt
 }
 
 // Gets the CSRF token from the cookie if it exists, otherwise generates a new one and sets it in the cookie.
-func (h *AuthHandlerImpl) GetOrResetCSRFToken(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (h *AuthHandlerImpl) GetOrResetCSRFToken(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(h.baseLogger, ctx)
 
 	refreshTokenValue := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
@@ -129,13 +129,13 @@ func (h *AuthHandlerImpl) GetOrResetCSRFToken(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (h *AuthHandlerImpl) SignUp(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(h.baseLogger, ctx)
 
 	log.Info("SignUp request received")
 	signupRequest := new(users.UserCreationRequest)
-	if err := c.BodyParser(signupRequest); err != nil {
+	if err := c.Bind().Body(signupRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, "unable to parse to signup request")
 	}
 
@@ -156,8 +156,8 @@ func (h *AuthHandlerImpl) SignUp(c *fiber.Ctx) error {
 }
 
 // Uses the refresh token to generate a new JWT,
-func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (h *AuthHandlerImpl) RefreshToken(c fiber.Ctx) error {
+	ctx := c.Context()
 	refreshToken := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
 	if refreshToken == "" {
 		return apperrors.ErrRefreshTokenCookieNotFound
@@ -171,8 +171,8 @@ func (h *AuthHandlerImpl) RefreshToken(c *fiber.Ctx) error {
 }
 
 // Logs out the user by revoking the refresh token.
-func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (h *AuthHandlerImpl) Logout(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(h.baseLogger, ctx)
 
 	refreshToken := c.Cookies(constants.REFRESH_TOKEN_COOKIE_NAME)
@@ -199,8 +199,10 @@ func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
 	return nil
 }
 
-func (h *AuthHandlerImpl) clearCookie(c *fiber.Ctx, cookie *fiber.Cookie) {
+func (h *AuthHandlerImpl) clearCookie(c fiber.Ctx, cookie *fiber.Cookie) {
 	// Set the cookie to expire immediately
 	cookie.Expires = fasthttp.CookieExpireDelete
 	c.Cookie(cookie)
 }
+
+// fiber:context-methods migrated

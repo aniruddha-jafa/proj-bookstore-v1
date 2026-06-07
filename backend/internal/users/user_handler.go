@@ -6,17 +6,17 @@ import (
 
 	"github.com/aniruddha-jafa/go-auth-v1/internal/apperrors"
 	"github.com/aniruddha-jafa/go-auth-v1/internal/logger"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
 type UserHandler interface {
 	// Debug only
-	GetAll(ctx *fiber.Ctx) error
+	GetAll(ctx fiber.Ctx) error
 
-	Get(ctx *fiber.Ctx) error
-	Update(ctx *fiber.Ctx) error
-	Delete(ctx *fiber.Ctx) error
+	Get(ctx fiber.Ctx) error
+	Update(ctx fiber.Ctx) error
+	Delete(ctx fiber.Ctx) error
 }
 
 type UserHandlerImpl struct {
@@ -31,8 +31,8 @@ func NewUserHandlerImpl(userService UserService) UserHandler {
 	}
 }
 
-func (u *UserHandlerImpl) GetAll(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (u *UserHandlerImpl) GetAll(c fiber.Ctx) error {
+	ctx := c.Context()
 	users, err := u.UserService.GetAll(&ctx)
 	if err != nil {
 		return err
@@ -41,8 +41,8 @@ func (u *UserHandlerImpl) GetAll(c *fiber.Ctx) error {
 	return nil
 }
 
-func (u *UserHandlerImpl) Get(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (u *UserHandlerImpl) Get(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(u.baseLogger, ctx)
 	idParam := c.Params("id")
 	if len(idParam) == 0 {
@@ -62,8 +62,8 @@ func (u *UserHandlerImpl) Get(c *fiber.Ctx) error {
 	return nil
 }
 
-func (u *UserHandlerImpl) Update(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (u *UserHandlerImpl) Update(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(u.baseLogger, ctx)
 	log.Info("POST users/:id")
 
@@ -77,7 +77,7 @@ func (u *UserHandlerImpl) Update(c *fiber.Ctx) error {
 	}
 	log.Info("Trying to update user", "id", id)
 	updateRequest := new(UserUpdateRequest)
-	if err := c.BodyParser(updateRequest); err != nil {
+	if err := c.Bind().Body(updateRequest); err != nil {
 		return apperrors.NewHttpError(http.StatusBadRequest, err.Error())
 	}
 	userRes, err := u.UserService.Update(&ctx, id, *updateRequest)
@@ -89,8 +89,8 @@ func (u *UserHandlerImpl) Update(c *fiber.Ctx) error {
 	return nil
 }
 
-func (u *UserHandlerImpl) Delete(c *fiber.Ctx) error {
-	ctx := c.UserContext()
+func (u *UserHandlerImpl) Delete(c fiber.Ctx) error {
+	ctx := c.Context()
 	log := logger.WithContext(u.baseLogger, ctx)
 	log.Info("DELETE users/:id")
 
@@ -111,3 +111,5 @@ func (u *UserHandlerImpl) Delete(c *fiber.Ctx) error {
 	c.Status(http.StatusNoContent)
 	return nil
 }
+
+// fiber:context-methods migrated
