@@ -25,6 +25,7 @@ export const API_PATHS = {
     },
     USER: {
         GET: (id: string) => `${API_URL}${PATHS.USER}/${id}`,
+        DELETE: (id: string) => `${API_URL}${PATHS.USER}/${id}`,
     },
 }
 

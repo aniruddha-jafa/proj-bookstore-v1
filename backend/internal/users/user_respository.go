@@ -22,7 +22,7 @@ type UserRepo interface {
 	Create(ctx *context.Context, user User) (User, error)
 
 	Update(ctx *context.Context, id uuid.UUID, userUpdateRequest UserUpdateRequest) (User, error)
-	// Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx *context.Context, id uuid.UUID) error
 }
 
 type UserRepoImpl struct {
@@ -127,4 +127,13 @@ func (r *UserRepoImpl) EmailIsTaken(ctx *context.Context, email string) (bool, e
 		return false, apperrors.ErrEmailTaken
 	}
 	return isTaken, nil
+}
+
+func (r *UserRepoImpl) Delete(ctx *context.Context, id uuid.UUID) error {
+	pgUUID := util.MakePgUuid(id)
+	err := r.queries.DeleteUser(*ctx, pgUUID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

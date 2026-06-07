@@ -11,51 +11,42 @@ import {
 import { Input } from '@/components/ui/input'
 import { FRONTEND_ROUTES } from '@/constants/frontend-routes'
 import MESSAGES from '@/constants/messages'
-import { login } from '@/features/auth/auth-api'
+import { signup } from '@/features/auth/auth-api'
 import {
-    loginRequestSchema,
-    type LoginRequest,
+    signupRequestSchema,
+    type SignupRequest,
 } from '@/features/auth/auth-schema'
-import { useAuthStore } from '@/features/auth/auth-store'
-import { logger } from '@/lib/logger'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
-export default function LoginPage() {
+export default function SignupPage() {
     const router = useRouter()
 
     const {
         register,
         handleSubmit,
         formState: { errors, isSubmitting },
-    } = useForm<LoginRequest>({
-        resolver: zodResolver(loginRequestSchema),
+    } = useForm<SignupRequest>({
+        resolver: zodResolver(signupRequestSchema),
         defaultValues: {
             email: '',
             password: '',
         },
     })
 
-    const { setOnLoginSuccess } = useAuthStore()
-
-    async function onSubmit(values: LoginRequest) {
+    async function onSubmit(values: SignupRequest) {
         try {
-            const res = await login(values)
+            const res = await signup(values)
             if (!res.ok) {
-                toast.error(res.message)
+                toast.error(MESSAGES.SIGNUP_ERROR)
                 return
             }
-            logger.info('login successful', {
-                userId: res.data.id,
-                email: res.data.email,
-            })
-            setOnLoginSuccess(res.data, res.data.token, res.data.csrfToken)
-
-            router.push(FRONTEND_ROUTES.PROFILE)
+            router.push(FRONTEND_ROUTES.LOGIN)
+            toast.success(MESSAGES.SIGNUP_SUCCESS)
         } catch {
-            toast.error(MESSAGES.LOGIN_ERROR)
+            toast.error(MESSAGES.SIGNUP_ERROR)
         }
     }
 
@@ -68,16 +59,16 @@ export default function LoginPage() {
             >
                 <Card className="w-full">
                     <CardHeader>
-                        <CardTitle>Login</CardTitle>
+                        <CardTitle>Sign up</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <FieldGroup>
                             <Field>
-                                <FieldLabel htmlFor="login-email">
+                                <FieldLabel htmlFor="signup-email">
                                     Email
                                 </FieldLabel>
                                 <Input
-                                    id="login-email"
+                                    id="signup-email"
                                     type="email"
                                     autoComplete="email"
                                     placeholder="your@email.com"
@@ -89,13 +80,13 @@ export default function LoginPage() {
                                 <FieldError>{errors.email?.message}</FieldError>
                             </Field>
                             <Field>
-                                <FieldLabel htmlFor="login-password">
+                                <FieldLabel htmlFor="signup-password">
                                     Password
                                 </FieldLabel>
                                 <Input
-                                    id="login-password"
+                                    id="signup-password"
                                     type="password"
-                                    autoComplete="current-password"
+                                    autoComplete="new-password"
                                     placeholder="********"
                                     aria-invalid={
                                         errors.password ? 'true' : 'false'
@@ -111,12 +102,12 @@ export default function LoginPage() {
                         </FieldGroup>
 
                         <Button
-                            id="login-submit"
+                            id="signup-submit"
                             type="submit"
                             className="w-full mt-4"
                             disabled={isSubmitting}
                         >
-                            Login
+                            Sign up
                         </Button>
                     </CardContent>
                 </Card>

@@ -9,6 +9,9 @@ import {
     LoginResponse,
     loginResponseSchema,
     RefreshTokenResponse,
+    SignupRequest,
+    SignupResponse,
+    signupResponseSchema,
 } from './auth-schema'
 import { useAuthStore } from './auth-store'
 
@@ -22,6 +25,20 @@ export const login = async (
             body: JSON.stringify(data),
         },
         loginResponseSchema
+    )
+    return res
+}
+
+export const signup = async (
+    data: SignupRequest
+): Promise<ApiResult<SignupResponse>> => {
+    const res = await apiRequest<SignupResponse>(
+        API_PATHS.AUTH.SIGNUP,
+        {
+            method: HTTP_METHOD.POST,
+            body: JSON.stringify(data),
+        },
+        signupResponseSchema
     )
     return res
 }

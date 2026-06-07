@@ -16,6 +16,7 @@ type UserHandler interface {
 
 	Get(ctx *fiber.Ctx) error
 	Update(ctx *fiber.Ctx) error
+	Delete(ctx *fiber.Ctx) error
 }
 
 type UserHandlerImpl struct {
@@ -85,5 +86,28 @@ func (u *UserHandlerImpl) Update(c *fiber.Ctx) error {
 	}
 	log.Info("User updated", "userId", userRes.ID, "email", userRes.Email)
 	c.JSON(userRes)
+	return nil
+}
+
+func (u *UserHandlerImpl) Delete(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+	log := logger.WithContext(u.baseLogger, ctx)
+	log.Info("DELETE users/:id")
+
+	idParam := c.Params("id")
+	if len(idParam) == 0 {
+		return apperrors.NewHttpError(http.StatusBadRequest, "id param is required")
+	}
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		return apperrors.NewHttpError(http.StatusBadRequest, "invalid uuid")
+	}
+	log.Info("Trying to delete user", "id", id)
+	err = u.UserService.Delete(&ctx, id)
+	if err != nil {
+		return err
+	}
+	log.Info("User deleted", "userId", id)
+	c.Status(http.StatusNoContent)
 	return nil
 }

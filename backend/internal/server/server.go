@@ -140,6 +140,7 @@ func InitServer() {
 	userGroup := apiV1Group.Group(constants.USER)
 	userGroup.Get(":id", middleware.RequireAuth, userHandler.Get)
 	userGroup.Post(":id", middleware.RequireAuth, userHandler.Update)
+	userGroup.Delete(":id", middleware.RequireAuth, userHandler.Delete)
 	userGroup.Get("/", userHandler.GetAll)
 
 	port := ":" + strconv.Itoa(config.Port)

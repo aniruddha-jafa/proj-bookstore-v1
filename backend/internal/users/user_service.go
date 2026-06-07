@@ -17,7 +17,7 @@ type UserService interface {
 	Get(ctx *context.Context, uuid uuid.UUID) (UserResponse, error)
 	Create(ctx *context.Context, userCreationRequest UserCreationRequest) (UserResponse, error)
 	Update(ctx *context.Context, id uuid.UUID, userUpdateRequest UserUpdateRequest) (UserResponse, error)
-	// Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx *context.Context, id uuid.UUID) error
 }
 
 type UserServiceImpl struct {
@@ -63,25 +63,30 @@ func (u *UserServiceImpl) Create(ctx *context.Context, userRequest UserCreationR
 	log := logger.WithContext(u.baseLogger, *ctx)
 
 	log.Info("Trying to create a user")
-	hashedPassword, err := security.HashPassword(userRequest.Password)
-	if err != nil {
-		return UserResponse{}, err
-	}
-	user := User{
-		Email:    userRequest.Email,
-		Password: hashedPassword,
-	}
-	emailIsTaken, err := u.UserRepo.EmailIsTaken(ctx, user.Email)
+
+	emailIsTaken, err := u.UserRepo.EmailIsTaken(ctx, userRequest.Email)
 	if err != nil {
 		return UserResponse{}, err
 	}
 	if emailIsTaken {
 		return UserResponse{}, apperrors.ErrEmailTaken
 	}
+
+	hashedPassword, err := security.HashPassword(userRequest.Password)
+	if err != nil {
+		return UserResponse{}, err
+	}
+
+	user := User{
+		Email:    userRequest.Email,
+		Password: hashedPassword,
+	}
+
 	user, err = u.UserRepo.Create(ctx, user)
 	if err != nil {
 		return UserResponse{}, err
 	}
+
 	return NewUserResponse(user), nil
 }
 
@@ -111,4 +116,15 @@ func (u *UserServiceImpl) Update(ctx *context.Context, userId uuid.UUID, userUpd
 		return UserResponse{}, nil
 	}
 	return NewUserResponse(user), nil
+}
+
+func (u *UserServiceImpl) Delete(ctx *context.Context, id uuid.UUID) error {
+	log := logger.WithContext(u.baseLogger, *ctx)
+	log.Info("Trying to delete a user", "userId", id)
+
+	err := u.UserRepo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -11,7 +11,7 @@ CREATE TABLE users (
 CREATE TABLE refresh_tokens (
     -- 32 bytes * 2 = 64 characters
     id VARCHAR(64) PRIMARY KEY,
-    user_id uuid REFERENCES users(id) NOT NULL,
+    user_id uuid REFERENCES users(id) ON DELETE CASCADE,
     expires_at TIMESTAMPTZ NOT NULL,
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL,
