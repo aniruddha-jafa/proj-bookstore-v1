@@ -71,38 +71,8 @@ func InitServer() {
 		ErrorHandler: errorHandler,
 	})
 
-	app.Use(middleware.RequestID)
-
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: config.CORSAllowOrigin,
-		AllowMethods: strings.Join([]string{
-			fiber.MethodGet,
-			fiber.MethodPost,
-			fiber.MethodPut,
-			fiber.MethodPatch,
-			fiber.MethodDelete,
-			fiber.MethodOptions,
-		}, ","),
-		AllowHeaders: strings.Join([]string{
-			"Origin",
-			"Content-Type",
-			"Accept",
-			"Authorization",
-			constants.CSRF_TOKEN_HEADER,
-		}, ","),
-		AllowCredentials: true,
-	}))
-
-	app.Use(loggerMiddleware.New(
-		loggerMiddleware.Config{
-			CustomTags: map[string]loggerMiddleware.LogFunc{
-				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c *fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
-					return output.WriteString(c.Get(constants.REQUEST_ID_HEADER, ""))
-				},
-			},
-			Format: "{time: ${time}, method: ${method}, path: ${path}, status: ${status}, requestId: ${requestId}, ip: ${ip}, latency: ${latency}, error: ${error}}",
-		},
-	))
+	// Global middleware
+	registerGlobalMiddleware(app, config)
 
 	// Ping
 	app.Get("/ping", func(ctx *fiber.Ctx) error {
@@ -146,6 +116,41 @@ func InitServer() {
 	port := ":" + strconv.Itoa(config.Port)
 	slog.Info("Listening on port", "port", port)
 	log.Fatal(app.Listen(port))
+}
+
+func registerGlobalMiddleware(app *fiber.App, config *config.AppConfig) {
+	app.Use(middleware.RequestID)
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: config.CORSAllowOrigin,
+		AllowMethods: strings.Join([]string{
+			fiber.MethodGet,
+			fiber.MethodPost,
+			fiber.MethodPut,
+			fiber.MethodPatch,
+			fiber.MethodDelete,
+			fiber.MethodOptions,
+		}, ","),
+		AllowHeaders: strings.Join([]string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			constants.CSRF_TOKEN_HEADER,
+		}, ","),
+		AllowCredentials: true,
+	}))
+
+	app.Use(loggerMiddleware.New(
+		loggerMiddleware.Config{
+			CustomTags: map[string]loggerMiddleware.LogFunc{
+				string(request_context.RequestIdKey): func(output loggerMiddleware.Buffer, c *fiber.Ctx, data *loggerMiddleware.Data, extraParam string) (int, error) {
+					return output.WriteString(c.Get(constants.REQUEST_ID_HEADER, ""))
+				},
+			},
+			Format: "{time: ${time}, method: ${method}, path: ${path}, status: ${status}, requestId: ${requestId}, ip: ${ip}, latency: ${latency}, error: ${error}}",
+		},
+	))
 }
 
 func initDbConfig(dbConfig config.DbConfig) (*pgxpool.Pool, error) {
